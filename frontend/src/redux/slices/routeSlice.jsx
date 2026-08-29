@@ -17,7 +17,7 @@ export const fetchRoutes = createAsyncThunk(
     try {
       const response = await getRoutes();
 
-      return response.data;
+      return response?.data?.data ?? response?.data ?? [];
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -33,7 +33,7 @@ export const fetchRouteBetweenLocations = createAsyncThunk(
     try {
       const response = await getRouteBetweenLocations(from, to);
 
-      return response.data;
+      return response?.data?.data ?? response?.data ?? null;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -125,7 +125,9 @@ const routeSlice = createSlice({
 
       .addCase(fetchRoutes.fulfilled, (state, action) => {
         state.loading = false;
-        state.routes = action.payload;
+        state.routes = Array.isArray(action.payload)
+          ? action.payload
+          : [];
       })
 
       .addCase(fetchRoutes.rejected, (state, action) => {
@@ -168,7 +170,7 @@ const routeSlice = createSlice({
   fetchRouteBetweenLocations.fulfilled,
   (state, action) => {
     state.routeLoading = false;
-    state.selectedRoute = action.payload;
+    state.selectedRoute = action.payload || null;
   }
 )
 

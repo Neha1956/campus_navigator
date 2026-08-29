@@ -14,7 +14,10 @@ const router = express.Router();
 
 router.post(
   "/",
-  upload.single("image"),
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "images", maxCount: 10 },
+  ]),
   createLocation
 );
 
@@ -30,7 +33,10 @@ router.get(
 
 router.put(
   "/:id",
-  upload.single("image"),
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "images", maxCount: 10 },
+  ]),
   updateLocation
 );
 

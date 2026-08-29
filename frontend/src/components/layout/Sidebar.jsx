@@ -9,54 +9,32 @@ import {
   X,
   Home,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
-
-const sidebarItems = [
-  {
-    label: "Home",
-    icon: Home,
-    path: "/",
-  },
-  {
-    label: "Campus Map",
-    icon: Map,
-    path: "/map",
-  },
-  {
-    label: "Locations",
-    icon: Building2,
-    path: "/locations",
-  },
-  {
-    label: "Library",
-    icon: Library,
-    path: "/locations?category=Library",
-  },
-  {
-    label: "Canteen",
-    icon: Utensils,
-    path: "/locations?category=Canteen",
-  },
-  {
-    label: "Main Gate",
-    icon: DoorOpen,
-    path: "/locations?category=Gate",
-  },
-  {
-    label: "Directions",
-    icon: Navigation,
-    path: "/directions",
-  },
-];
-
-const sidebarClass = ({ isActive }) =>
-  `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
-    isActive
-      ? "bg-blue-50 text-blue-600 shadow-sm"
-      : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
-  }`;
+import { NavLink, useLocation } from "react-router-dom";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const currentCategory = searchParams.get("category");
+  const currentPath = location.pathname;
+
+  const getSidebarClass = (path, category = null) => {
+    let isActive = false;
+    
+    if (category) {
+      isActive = currentPath === "/locations" && currentCategory === category;
+    } else if (path === "/locations") {
+      isActive = currentPath === "/locations" && !currentCategory;
+    } else {
+      isActive = currentPath === path;
+    }
+
+    return `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
+      isActive
+        ? "bg-blue-50 text-blue-600 shadow-sm"
+        : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+    }`;
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -115,10 +93,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
             </p>
           </div>
 
-          {/* ================================================= */}
           {/* TOP NAVIGATION - Mobile Only */}
-          {/* ================================================= */}
-
           <div className="mb-4 border-b border-slate-100 pb-4 lg:hidden">
 
             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
@@ -126,31 +101,27 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
             </p>
 
             <nav className="space-y-1">
-
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <NavLink
-                    key={item.label}
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={sidebarClass}
-                  >
-                    <Icon size={19} />
-                    <span>{item.label}</span>
-                  </NavLink>
-                );
-              })}
-
+              <NavLink to="/" end onClick={() => setSidebarOpen(false)} className={({ isActive }) => getSidebarClass("/")}>
+                <Home size={19} />
+                <span>Home</span>
+              </NavLink>
+              <NavLink to="/map" onClick={() => setSidebarOpen(false)} className={({ isActive }) => getSidebarClass("/map")}>
+                <Map size={19} />
+                <span>Campus Map</span>
+              </NavLink>
+              <NavLink to="/locations" onClick={() => setSidebarOpen(false)} className={({ isActive }) => getSidebarClass("/locations")}>
+                <Building2 size={19} />
+                <span>Locations</span>
+              </NavLink>
+              <NavLink to="/directions" onClick={() => setSidebarOpen(false)} className={({ isActive }) => getSidebarClass("/directions")}>
+                <Navigation size={19} />
+                <span>Directions</span>
+              </NavLink>
             </nav>
 
           </div>
 
-          {/* ================================================= */}
           {/* DESKTOP / EXPLORE MENU */}
-          {/* ================================================= */}
-
           <div>
 
             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 lg:hidden">
@@ -162,7 +133,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <NavLink
                 to="/locations"
                 onClick={() => setSidebarOpen(false)}
-                className={sidebarClass}
+                className={getSidebarClass("/locations")}
               >
                 <Building2 size={19} />
                 <span>Buildings</span>
@@ -171,7 +142,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <NavLink
                 to="/locations?category=Library"
                 onClick={() => setSidebarOpen(false)}
-                className={sidebarClass}
+                className={getSidebarClass("/locations", "Library")}
               >
                 <Library size={19} />
                 <span>Library</span>
@@ -180,7 +151,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <NavLink
                 to="/locations?category=Canteen"
                 onClick={() => setSidebarOpen(false)}
-                className={sidebarClass}
+                className={getSidebarClass("/locations", "Canteen")}
               >
                 <Utensils size={19} />
                 <span>Canteen</span>
@@ -189,7 +160,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <NavLink
                 to="/locations?category=Gate"
                 onClick={() => setSidebarOpen(false)}
-                className={sidebarClass}
+                className={getSidebarClass("/locations", "Gate")}
               >
                 <DoorOpen size={19} />
                 <span>Main Gate</span>
@@ -205,9 +176,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
             <NavLink
               to="/admin"
               onClick={() => setSidebarOpen(false)}
-              className={sidebarClass}
+              className={getSidebarClass("/admin")}
             >
-              <Settings size={19} />
+              <Settings size= {19} />
               <span>Admin Panel</span>
             </NavLink>
 

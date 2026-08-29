@@ -1,6 +1,7 @@
 import Route from "../models/Route.js";
 import Location from "../models/Location.js";
 import getShortestPath from "../utils/shortestPath.js";
+
 // CREATE ROUTE
 export const createRoute = async (req, res) => {
   try {
@@ -62,15 +63,15 @@ export const createRoute = async (req, res) => {
       isActive: isActive ?? true,
     });
 
-    // Populate locations
+    // Populate locations with building and floor info
     await route.populate([
       {
         path: "from",
-        select: "name category x y",
+        select: "name category building floor x y",
       },
       {
         path: "to",
-        select: "name category x y",
+        select: "name category building floor x y",
       },
     ]);
 
@@ -90,12 +91,13 @@ export const createRoute = async (req, res) => {
   }
 };
 
+
 // GET ALL ROUTES
 export const getRoutes = async (req, res) => {
   try {
     const routes = await Route.find()
-      .populate("from", "name category x y")
-      .populate("to", "name category x y")
+      .populate("from", "name category building floor x y")
+      .populate("to", "name category building floor x y")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -117,8 +119,8 @@ export const getRoutes = async (req, res) => {
 export const getRouteById = async (req, res) => {
   try {
     const route = await Route.findById(req.params.id)
-      .populate("from", "name category x y")
-      .populate("to", "name category x y");
+      .populate("from", "name category building floor x y")
+      .populate("to", "name category building floor x y");
 
     if (!route) {
       return res.status(404).json({
@@ -209,11 +211,11 @@ export const updateRoute = async (req, res) => {
     await route.populate([
       {
         path: "from",
-        select: "name category x y",
+        select: "name category building floor x y",
       },
       {
         path: "to",
-        select: "name category x y",
+        select: "name category building floor x y",
       },
     ]);
 
@@ -253,6 +255,8 @@ export const deleteRoute = async (req, res) => {
       message: "Route deleted successfully",
     });
   } catch (error) {
+    console.error("Delete route error:", error);
+
     res.status(500).json({
       success: false,
       message: "Failed to delete route",
@@ -261,39 +265,8 @@ export const deleteRoute = async (req, res) => {
   }
 };
 
-/*
-// GET ROUTE BETWEEN TWO LOCATIONS
-export const getRouteBetweenLocations = async (req, res) => {
-  try {
-    const { from, to } = req.params;
 
-    const route = await Route.findOne({
-      from,
-      to,
-    })
-      .populate("from", "name category x y")
-      .populate("to", "name category x y");
-
-    if (!route) {
-      return res.status(404).json({
-        success: false,
-        message: "No route found between selected locations",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: route,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to find route",
-      error: error.message,
-    });
-  }
-};*/
-
+// GET ROUTE BETWEEN TWO LOCATIONS (DIJKSTRA)
 export const getRouteBetweenLocations = async (req, res) => {
   try {
     const { from, to } = req.params;
@@ -313,11 +286,10 @@ export const getRouteBetweenLocations = async (req, res) => {
     }
 
     // Check locations
-    const [fromLocation, toLocation] =
-      await Promise.all([
-        Location.findById(from),
-        Location.findById(to),
-      ]);
+    const [fromLocation, toLocation] = await Promise.all([
+      Location.findById(from),
+      Location.findById(to),
+    ]);
 
     if (!fromLocation) {
       return res.status(404).json({
@@ -338,7 +310,7 @@ export const getRouteBetweenLocations = async (req, res) => {
       isActive: { $ne: false },
     }).populate(
       "from to",
-      "name category x y"
+      "name category building floor x y"
     );
 
     if (!routes.length) {
@@ -348,105 +320,84 @@ export const getRouteBetweenLocations = async (req, res) => {
       });
     }
 
-    // Dijkstra
-    const result = getShortestPath(
-      routes,
-      from,
-      to
-    );
-    /*
-console.log("========== ROUTE DEBUG ==========");
-console.log("FROM:", from);
-console.log("TO:", to);
-console.log("TOTAL ROUTES:", routes.length);
-console.log("RESULT:", result);
-console.log("==================================");*/
+    // Dijkstra Pathfinding Execution
+    const result = getShortestPath(routes, from, to);
+
     if (!result) {
       return res.status(404).json({
         success: false,
-        message:
-          "No route available between these locations",
+        message: "No route available between these locations",
       });
     }
 
     // Calculate walking time
-    const walkingTime = Math.ceil(
-      result.distance / 80
-    );
+    const walkingTime = Math.ceil(result.distance / 80);
 
     return res.status(200).json({
       success: true,
-
       data: {
         from: {
           _id: fromLocation._id,
           name: fromLocation.name,
           category: fromLocation.category,
+          building: fromLocation.building,
+          floor: fromLocation.floor,
           x: fromLocation.x,
           y: fromLocation.y,
         },
-
         to: {
           _id: toLocation._id,
           name: toLocation.name,
           category: toLocation.category,
+          building: toLocation.building,
+          floor: toLocation.floor,
           x: toLocation.x,
           y: toLocation.y,
         },
-
         distance: result.distance,
-
         walkingTime,
-
-       path: result.path.map((route) => {
-  if (route.reverse) {
-    return {
-      _id: route._id,
-      distance: route.distance,
-      walkingTime: route.walkingTime,
-      from: route.to,
-      to: route.from,
-      reverse: true,
-    };
-  }
-
-  return {
-    _id: route._id,
-    distance: route.distance,
-    walkingTime: route.walkingTime,
-    from: route.from,
-    to: route.to,
-    reverse: false,
-  };
-}),
-
-       directions: result.path.map((route, index) => {
-  if (route.reverse) {
-    return {
-      step: index + 1,
-      from: route.to.name,
-      to: route.from.name,
-      distance: route.distance,
-      walkingTime: route.walkingTime,
-    };
-  }
-
-  return {
-    step: index + 1,
-    from: route.from.name,
-    to: route.to.name,
-    distance: route.distance,
-    walkingTime: route.walkingTime,
-  };
-}),
+        path: result.path.map((route) => {
+          if (route.reverse) {
+            return {
+              _id: route._id,
+              distance: route.distance,
+              walkingTime: route.walkingTime,
+              from: route.to,
+              to: route.from,
+              reverse: true,
+            };
+          }
+          return {
+            _id: route._id,
+            distance: route.distance,
+            walkingTime: route.walkingTime,
+            from: route.from,
+            to: route.to,
+            reverse: false,
+          };
+        }),
+        directions: result.path.map((route, index) => {
+          if (route.reverse) {
+            return {
+              step: index + 1,
+              from: route.to.name,
+              to: route.from.name,
+              distance: route.distance,
+              walkingTime: route.walkingTime,
+            };
+          }
+          return {
+            step: index + 1,
+            from: route.from.name,
+            to: route.to.name,
+            distance: route.distance,
+            walkingTime: route.walkingTime,
+          };
+        }),
       },
     });
   } catch (error) {
-    console.error(
-      "Get route between locations error:",
-      error
-    );
-
+    console.error("Get route between locations error:", error);
     return res.status(500).json({
       success: false,
       message: error.message,

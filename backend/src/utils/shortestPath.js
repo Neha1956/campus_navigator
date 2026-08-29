@@ -18,10 +18,21 @@ const getShortestPath = (routes, startId, endId) => {
       graph[to] = [];
     }
 
+    // Optional: Agar floor change ho raha hai toh stair/floor penalty add kar sakte hain
+    let routeWeight = route.distance;
+    const fromFloor = route.from.floor ?? 0;
+    const toFloor = route.to.floor ?? 0;
+    
+    if (fromFloor !== toFloor) {
+      // Jaise 5 meters ya equivalent walking distance penalty for changing floors
+      routeWeight += 10; 
+    }
+
     // Forward
     graph[from].push({
       node: to,
       route,
+      weight: routeWeight,
       reverse: false,
     });
 
@@ -29,13 +40,10 @@ const getShortestPath = (routes, startId, endId) => {
     graph[to].push({
       node: from,
       route,
+      weight: routeWeight,
       reverse: true,
     });
   });
-
-  console.log("GRAPH:", graph);
-  console.log("START:", start);
-  console.log("END:", end);
 
   if (!graph[start]) {
     console.log("START NODE NOT FOUND");
@@ -67,19 +75,15 @@ const getShortestPath = (routes, startId, endId) => {
       }
     }
 
-    if (current === null) {
-      break;
-    }
-
-    if (current === end) {
+    if (current === null || current === end) {
       break;
     }
 
     visited.add(current);
 
     for (const neighbor of graph[current] || []) {
-      const newDistance =
-        distances[current] + neighbor.route.distance;
+      // Use the calculated weight (includes floor change penalty if applicable)
+      const newDistance = distances[current] + neighbor.weight;
 
       if (newDistance < distances[neighbor.node]) {
         distances[neighbor.node] = newDistance;
@@ -115,8 +119,6 @@ const getShortestPath = (routes, startId, endId) => {
 
     current = previousNode.node;
   }
-
-  console.log("PATH FOUND:", path);
 
   return {
     distance: distances[end],

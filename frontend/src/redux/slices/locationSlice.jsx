@@ -15,7 +15,7 @@ export const fetchLocations = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await getLocations();
-      return response.data;
+      return response;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -32,7 +32,7 @@ export const fetchLocationById = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await getLocationById(id);
-      return response.data;
+      return response;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -129,7 +129,11 @@ const locationSlice = createSlice({
 
       .addCase(fetchLocations.fulfilled, (state, action) => {
         state.loading = false;
-        state.locations = action.payload;
+        state.locations = Array.isArray(action.payload?.data)
+          ? action.payload.data
+          : Array.isArray(action.payload)
+            ? action.payload
+            : [];
       })
 
       .addCase(fetchLocations.rejected, (state, action) => {
@@ -146,7 +150,7 @@ const locationSlice = createSlice({
 
       .addCase(fetchLocationById.fulfilled, (state, action) => {
         state.loading = false;
-        state.selectedLocation = action.payload;
+        state.selectedLocation = action.payload?.data || action.payload || null;
       })
 
       .addCase(fetchLocationById.rejected, (state, action) => {
@@ -157,7 +161,10 @@ const locationSlice = createSlice({
 
       // CREATE
       .addCase(addLocation.fulfilled, (state, action) => {
-        state.locations.push(action.payload);
+        const createdLocation = action.payload?.data || action.payload;
+        if (createdLocation) {
+          state.locations.unshift(createdLocation);
+        }
       })
 
 

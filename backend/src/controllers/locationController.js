@@ -1,4 +1,5 @@
 import Location from "../models/Location.js";
+import { normalizeLocationImages } from "../utils/locationImageUtils.js";
 
 // CREATE LOCATION
 export const createLocation = async (req, res) => {
@@ -6,6 +7,8 @@ export const createLocation = async (req, res) => {
     const {
       name,
       category,
+      building,
+      floor,
       description,
       x,
       y,
@@ -19,14 +22,23 @@ export const createLocation = async (req, res) => {
       });
     }
 
+    const uploadedFiles = [
+      ...(req.files?.images || []),
+      ...(req.files?.image || []),
+    ];
+    const { image, images } = normalizeLocationImages(uploadedFiles);
+
     const location = await Location.create({
       name,
       category,
+      building: building || "RCIT Building",
+      floor: floor !== undefined ? Number(floor) : 0,
       description,
-      x,
-      y,
+      x: Number(x),
+      y: Number(y),
       icon,
-      image: req.file ? req.file.path : "",
+      image,
+      images,
     });
 
     res.status(201).json({
@@ -46,12 +58,17 @@ export const createLocation = async (req, res) => {
 };
 
 
-// GET ALL LOCATIONS
+// GET ALL LOCATIONS (With Floor & Building Filtering)
 export const getLocations = async (req, res) => {
   try {
-    const locations = await Location.find({
-      isActive: true,
-    }).sort({ name: 1 });
+    const { floor, building, category } = req.query;
+    let filter = { isActive: true };
+
+    if (floor !== undefined) filter.floor = Number(floor);
+    if (building) filter.building = building;
+    if (category) filter.category = category;
+
+    const locations = await Location.find(filter).sort({ floor: 1, name: 1 });
 
     res.status(200).json({
       success: true,
@@ -100,6 +117,8 @@ export const updateLocation = async (req, res) => {
     const {
       name,
       category,
+      building,
+      floor,
       description,
       x,
       y,
@@ -117,13 +136,22 @@ export const updateLocation = async (req, res) => {
 
     location.name = name ?? location.name;
     location.category = category ?? location.category;
+    location.building = building ?? location.building;
+    location.floor = floor !== undefined ? Number(floor) : location.floor;
     location.description = description ?? location.description;
-    location.x = x ?? location.x;
-    location.y = y ?? location.y;
+    location.x = x !== undefined ? Number(x) : location.x;
+    location.y = y !== undefined ? Number(y) : location.y;
     location.icon = icon ?? location.icon;
 
-    if (req.file) {
-      location.image = req.file.path;
+    const uploadedFiles = [
+      ...(req.files?.images || []),
+      ...(req.files?.image || []),
+    ];
+
+    if (uploadedFiles.length) {
+      const { image, images } = normalizeLocationImages(uploadedFiles);
+      location.image = image;
+      location.images = images;
     }
 
     await location.save();

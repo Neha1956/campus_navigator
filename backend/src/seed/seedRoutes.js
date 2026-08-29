@@ -13,7 +13,8 @@ const seedRoutes = async () => {
 
     console.log("Finding campus locations...");
 
-    const locations = await Location.find({ isActive: true });
+    // Saari locations ko fetch karne ke liye filter hata diya hai
+    const locations = await Location.find({});
 
     const getLocation = (name) => {
       return locations.find(
@@ -26,7 +27,7 @@ const seedRoutes = async () => {
       throw new Error("At least two locations are required. Please seed locations first.");
     }
 
-    // Remove existing routes
+    // Purane routes ko delete karna
     await Route.deleteMany({});
 
     const connected = [getLocation("Main Gate") || locations[0]];
@@ -70,13 +71,11 @@ const seedRoutes = async () => {
     console.log(`Total routes: ${routes.length}`);
 
     await mongoose.connection.close();
-
     process.exit(0);
   } catch (error) {
     console.error("Route seeding failed:", error.message);
 
     await mongoose.connection.close();
-
     process.exit(1);
   }
 };
