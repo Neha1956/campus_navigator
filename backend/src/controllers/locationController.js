@@ -5,41 +5,68 @@ import { normalizeLocationImages } from "../utils/locationImageUtils.js";
 export const createLocation = async (req, res) => {
   try {
     const {
-      name,
-      category,
-      building,
-      floor,
-      description,
-      x,
-      y,
-      icon,
-    } = req.body;
-
+  name,
+  category,
+  building,
+  buildingId,
+  floor,
+  floorId,
+  mapElementId,
+  description,
+  x,
+  y,
+  icon,
+} = req.body;
     if (!name || !category || x === undefined || y === undefined) {
       return res.status(400).json({
         success: false,
         message: "Name, category, x and y are required",
       });
     }
+if (mapElementId) {
+  const existingLocation = await Location.findOne({
+    mapElementId,
+  });
 
+  if (existingLocation) {
+    return res.status(400).json({
+      success: false,
+      message: "This map element is already added as a location.",
+    });
+  }
+}
     const uploadedFiles = [
       ...(req.files?.images || []),
       ...(req.files?.image || []),
     ];
     const { image, images } = normalizeLocationImages(uploadedFiles);
 
-    const location = await Location.create({
-      name,
-      category,
-      building: building || "RCIT Building",
-      floor: floor !== undefined ? Number(floor) : 0,
-      description,
-      x: Number(x),
-      y: Number(y),
-      icon,
-      image,
-      images,
-    });
+   const location = await Location.create({
+  name,
+  category,
+
+  building: building || "RCIT Building",
+
+  buildingId: buildingId || null,
+
+  floor: floor !== undefined ? Number(floor) : 0,
+
+  floorId: floorId || null,
+
+  mapElementId: mapElementId || null,
+
+  description: description || "",
+
+  x: Number(x),
+  y: Number(y),
+
+  icon: icon || category,
+
+  image,
+  images,
+
+  isActive: true,
+});
 
     res.status(201).json({
       success: true,

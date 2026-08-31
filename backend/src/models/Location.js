@@ -7,44 +7,71 @@ const locationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
     category: {
       type: String,
       required: true,
-      trim: true, // e.g., "outdoor", "classroom", "lab", "washroom", "corridor"
+      trim: true,
     },
+
     building: {
       type: String,
-      default: "RCIT Building", // To separate RCIT building from other campus areas
+      default: "RCIT Building",
     },
+
+    buildingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Building",
+      default: null,
+    },
+
     floor: {
       type: Number,
-      default: 0, // 0 for Ground Floor, 1 for 1st Floor, etc.
+      default: 0,
     },
+
+    floorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Floor",
+      default: null,
+    },
+
+    mapElementId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MapElement",
+      default: null,
+    },
+
     description: {
       type: String,
       default: "",
     },
-    // Coordinates for rendering on map UI
+
     x: {
       type: Number,
       required: true,
     },
+
     y: {
       type: Number,
       required: true,
     },
+
     icon: {
       type: String,
       default: "building",
     },
+
     image: {
       type: String,
       default: "",
     },
+
     images: {
       type: [String],
       default: [],
     },
+
     isActive: {
       type: Boolean,
       default: true,

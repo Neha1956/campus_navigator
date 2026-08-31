@@ -427,7 +427,7 @@ const seedLocations = async () => {
     console.log("Old locations deleted successfully.");
 
     // Naye updated locations insert karega
-    const createdLocations = await Location.insertMany(locations);
+    /*const createdLocations = await Location.insertMany(locations);
 
     console.log("New campus locations seeded successfully!");
     console.log(`Total locations: ${createdLocations.length}`);
@@ -436,7 +436,7 @@ const seedLocations = async () => {
       console.log(
         `${location.name} [Building: ${location.building} | Floor ${location.floor}] → ${location._id}`
       );
-    });
+    });*/
 
     process.exit(0);
   } catch (error) {

@@ -4,7 +4,11 @@ import cookieParser from "cookie-parser";
 
 import locationRoutes from "./routes/locationRoutes.js";
 import routeRoutes from "./routes/routeRoutes.js";
-
+import buildingRoutes from "./routes/buildingRoutes.js";
+import floorRoutes from "./routes/floorRoutes.js";
+import mapElementRoutes from "./routes/mapElementRoutes.js";
+import roadRoutes from "./routes/roadRoutes.js";
+import campusElementRoutes from "./routes/campusElementRoutes.js";
 const app = express();
 
 app.use(cors());
@@ -46,5 +50,12 @@ app.get("/", (req, res) => {
 
 app.use("/api/locations", locationRoutes);
 app.use("/api/routes", routeRoutes);
-
+app.use("/api/buildings", buildingRoutes);
+app.use("/api/floors", floorRoutes);
+app.use("/api/map-elements", mapElementRoutes);
+app.use("/api/roads", roadRoutes);
+app.use(
+  "/api/campus-elements",
+  campusElementRoutes
+);
 export default app;

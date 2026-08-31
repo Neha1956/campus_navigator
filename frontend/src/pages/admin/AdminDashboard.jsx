@@ -22,6 +22,9 @@ const AdminDashboard = () => {
           <Link to="/admin/add-route" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600">
             <Route size={18} /> Manage Routes
           </Link>
+           <Link to="/admin/campus-builder" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600">
+            <Route size={18} /> Campus Builder
+          </Link>
         </nav>
       </aside>
 
