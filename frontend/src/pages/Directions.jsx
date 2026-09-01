@@ -15,6 +15,10 @@ import {
   LocateFixed,
 } from "lucide-react";
 
+import CampusMap from "../components/AdminCampusBuilder/CampusMap";
+import { fetchBuildings } from "../redux/slices/buildingSlice";
+import { fetchRoads } from "../redux/slices/roadSlice";
+import { fetchCampusElements } from "../redux/slices/campusElementSlice";
 import { fetchLocations } from "../redux/slices/locationSlice";
 import { fetchRouteBetweenLocations } from "../redux/slices/routeSlice";
 
@@ -75,6 +79,9 @@ const getLocationColor = (category) => {
 const DirectionsMap = ({
   locations = [],
   selectedRoute,
+  buildings = [],
+  roads = [],
+  campusElements = [],
 }) => {
   const fromId = selectedRoute?.from?._id;
   const toId = selectedRoute?.to?._id;
@@ -143,6 +150,58 @@ const DirectionsMap = ({
   const polylinePoints = routePoints
     .map((point) => `${point.x},${point.y}`)
     .join(" ");
+
+  const routeLocations = useMemo(() => {
+    const namedRouteLocations = selectedRoute?.viaLocations || [];
+    const nearbyLocations = locations.filter((location) => {
+      return routePoints.some((point, index) => {
+        if (index === 0) return false;
+        const previousPoint = routePoints[index - 1];
+        const deltaX = point.x - previousPoint.x;
+        const deltaY = point.y - previousPoint.y;
+        const lengthSquared = deltaX ** 2 + deltaY ** 2;
+        const ratio = lengthSquared
+          ? Math.max(0, Math.min(1, (
+              (location.x - previousPoint.x) * deltaX +
+              (location.y - previousPoint.y) * deltaY
+            ) / lengthSquared))
+          : 0;
+        const closestX = previousPoint.x + ratio * deltaX;
+        const closestY = previousPoint.y + ratio * deltaY;
+        return Math.hypot(location.x - closestX, location.y - closestY) <= 80;
+      });
+    });
+
+    const mergedLocations = [...namedRouteLocations, ...nearbyLocations];
+    return mergedLocations.filter(
+      (location, index, allLocations) =>
+        allLocations.findIndex((item) => item._id === location._id) === index
+    );
+  }, [locations, routePoints, selectedRoute]);
+
+  return (
+    <div className="relative h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-[#f8fafc] shadow-sm">
+      <CampusMap
+        campusWidth={1400}
+        campusHeight={900}
+        showGrid={true}
+        mapView="2d"
+        activeTool="select"
+        buildings={buildings}
+        campusRoads={roads}
+        campusElements={campusElements}
+        locations={locations}
+        selectedLocation={source || destination}
+        onLocationClick={() => {}}
+        routePath={routePoints}
+        sourceLocation={source}
+        destinationLocation={destination}
+        readOnly={true}
+        fitToContainer={true}
+        routeLocations={routeLocations.length > 0 ? routeLocations : [source, destination].filter(Boolean)}
+      />
+    </div>
+  );
 
   return (
     <div className="relative h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-[#f8fafc] shadow-sm">
@@ -564,6 +623,10 @@ const Directions = () => {
 
   const dispatch = useDispatch();
 
+  const { buildings = [] } = useSelector((state) => state.buildings || {});
+  const { roads = [] } = useSelector((state) => state.roads || {});
+  const { elements: campusElements = [] } = useSelector((state) => state.campusElements || {});
+
   const {
     locations,
     loading: locationsLoading,
@@ -586,11 +649,23 @@ const Directions = () => {
 
   useEffect(() => {
 
+    if (!buildings.length) {
+      dispatch(fetchBuildings());
+    }
+
+    if (!roads.length) {
+      dispatch(fetchRoads());
+    }
+
+    if (!campusElements.length) {
+      dispatch(fetchCampusElements());
+    }
+
     if (!locations.length) {
       dispatch(fetchLocations());
     }
 
-  }, [dispatch, locations.length]);
+  }, [dispatch, locations.length, buildings.length, roads.length, campusElements.length]);
 
   /* Find route */
 
@@ -808,6 +883,9 @@ const Directions = () => {
               <DirectionsMap
                 locations={locations}
                 selectedRoute={selectedRoute}
+                buildings={buildings}
+                roads={roads}
+                campusElements={campusElements}
               />
 
             </div>
@@ -861,6 +939,24 @@ const Directions = () => {
                 </div>
 
               </div>
+
+              {selectedRoute.viaLocations?.length > 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="font-bold text-slate-900">
+                    Locations along this route
+                  </h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedRoute.viaLocations.map((location) => (
+                      <span
+                        key={location._id}
+                        className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
+                      >
+                        {location.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Directions */}
 

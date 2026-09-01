@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   SlidersHorizontal,
@@ -7,16 +8,20 @@ import {
   X,
 } from "lucide-react";
 
+import { fetchBuildings, setCurrentBuilding } from "../redux/slices/buildingSlice";
+import { fetchRoads } from "../redux/slices/roadSlice";
+import { fetchCampusElements } from "../redux/slices/campusElementSlice";
 import { fetchLocations } from "../redux/slices/locationSlice";
 import {
   setSelectedLocation,
 } from "../redux/slices/locationSlice";
 import { fetchRoutes } from "../redux/slices/routeSlice";
-import CampusMap from "../components/map/CampusMap";
+import CampusMap from "../components/AdminCampusBuilder/CampusMap";
 
 const MapPage = () => {
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const {
     locations,
@@ -24,6 +29,9 @@ const MapPage = () => {
     error,
     selectedLocation,
   } = useSelector((state) => state.locations);
+  const { buildings = [] } = useSelector((state) => state.buildings || {});
+  const { roads = [] } = useSelector((state) => state.roads || {});
+  const { elements: campusElements = [] } = useSelector((state) => state.campusElements || {});
 const {
   routes,
   loading: routesLoading,
@@ -32,12 +40,19 @@ const {
 console.log("ROUTES:", routes);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const mapCanvasRef = useRef(null);
 
   useEffect(() => {
     if (!locations.length) {
       dispatch(fetchLocations());
     }
   }, [dispatch, locations.length]);
+
+  useEffect(() => {
+    if (!buildings.length) dispatch(fetchBuildings());
+    if (!roads.length) dispatch(fetchRoads());
+    if (!campusElements.length) dispatch(fetchCampusElements());
+  }, [dispatch, buildings.length, roads.length, campusElements.length]);
 
   const categories = useMemo(() => {
 
@@ -79,6 +94,27 @@ console.log("ROUTES:", routes);
 
   const handleLocationClick = (location) => {
     dispatch(setSelectedLocation(location));
+
+    const locationBuildingId =
+      typeof location.buildingId === "object"
+        ? location.buildingId?._id
+        : location.buildingId;
+
+    const building = buildings.find(
+      (item) =>
+        item._id === locationBuildingId ||
+        item.name === location.building
+    );
+
+    if (building) {
+      dispatch(setCurrentBuilding(building));
+      navigate("/campus-3d");
+    }
+  };
+
+  const handleOpenBuilding = (building) => {
+    dispatch(setCurrentBuilding(building));
+    navigate("/campus-3d");
   };
 
   const clearSelection = () => {
@@ -191,11 +227,22 @@ console.log("ROUTES:", routes);
           ) : (
 
            <CampusMap
-  locations={filteredLocations}
-  routes={routes}
-  selectedLocation={selectedLocation}
-  onLocationClick={handleLocationClick}
-/>
+              campusCanvasRef={mapCanvasRef}
+              campusWidth={1400}
+              campusHeight={900}
+              showGrid={true}
+              mapView="2d"
+              activeTool="select"
+              buildings={buildings}
+              campusRoads={roads}
+              campusElements={campusElements}
+              locations={filteredLocations}
+              selectedLocation={selectedLocation}
+              onLocationClick={handleLocationClick}
+              handleOpenBuilding={handleOpenBuilding}
+              readOnly={true}
+              fitToContainer={true}
+            />
 
           )}
 

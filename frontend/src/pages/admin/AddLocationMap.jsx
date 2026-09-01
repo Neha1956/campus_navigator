@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 
+import CampusMap from "../../components/AdminCampusBuilder/CampusMap";
+import { fetchBuildings } from "../../redux/slices/buildingSlice";
+import { fetchRoads } from "../../redux/slices/roadSlice";
+import { fetchFloorsByBuilding } from "../../redux/slices/floorSlice";
+import { fetchCampusElements } from "../../redux/slices/campusElementSlice";
+
 import {
   addLocation,
   editLocation,
@@ -26,15 +32,21 @@ const AddLocationMap = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { id } = useParams();
-  const svgRef = useRef(null);
+  const mapCanvasRef = useRef(null);
   const isEditMode = Boolean(id);
   const { selectedLocation } = useSelector((state) => state.locations);
+  const { buildings = [] } = useSelector((state) => state.buildings || {});
+  const { roads = [] } = useSelector((state) => state.roads || {});
+  const { floors = [] } = useSelector((state) => state.floors || {});
+  const { elements: campusElements = [] } = useSelector((state) => state.campusElements || {});
 
   const [form, setForm] = useState({
     name: "",
     category: "Building",
     building: "RCIT Building",
+    buildingId: "",
     floor: 0,
+    floorId: "",
     description: "",
     icon: "Building2",
   });
@@ -43,6 +55,10 @@ const AddLocationMap = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
 
   useEffect(() => {
+    dispatch(fetchBuildings());
+    dispatch(fetchRoads());
+    dispatch(fetchCampusElements());
+
     if (isEditMode && id) {
       dispatch(fetchLocationById(id));
     }
@@ -60,7 +76,9 @@ const AddLocationMap = () => {
         name: selectedLocation.name || "",
         category: selectedLocation.category || "Building",
         building: selectedLocation.building || "RCIT Building",
+        buildingId: selectedLocation.buildingId || "",
         floor: selectedLocation.floor ?? 0,
+        floorId: selectedLocation.floorId || "",
         description: selectedLocation.description || "",
         icon: selectedLocation.icon || "Building2",
       });
@@ -72,6 +90,12 @@ const AddLocationMap = () => {
   }, [isEditMode, selectedLocation]);
 
   useEffect(() => {
+    if (form.buildingId) {
+      dispatch(fetchFloorsByBuilding(form.buildingId));
+    }
+  }, [dispatch, form.buildingId]);
+
+  useEffect(() => {
     const urls = selectedFiles.map((file) => URL.createObjectURL(file));
     setPreviewUrls(urls);
 
@@ -80,13 +104,9 @@ const AddLocationMap = () => {
     };
   }, [selectedFiles]);
 
-  const handleMapClick = (event) => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
-    const y = ((event.clientY - rect.top) / rect.height) * 100;
-    setCoords({ x, y });
+  const handleMapPointSelected = (_, point) => {
+    if (!point) return;
+    setCoords({ x: Number(point.x), y: Number(point.y) });
   };
 
   const handleFileChange = (event) => {
@@ -122,7 +142,9 @@ const AddLocationMap = () => {
     formData.append("name", form.name);
     formData.append("category", form.category);
     formData.append("building", form.building);
+    if (form.buildingId) formData.append("buildingId", form.buildingId);
     formData.append("floor", String(form.floor));
+    if (form.floorId) formData.append("floorId", form.floorId);
     formData.append("description", form.description);
     formData.append("icon", form.icon);
     formData.append("x", String(coords.x));
@@ -144,7 +166,9 @@ const AddLocationMap = () => {
         name: "",
         category: "Building",
         building: "RCIT Building",
+        buildingId: "",
         floor: 0,
+        floorId: "",
         description: "",
         icon: "Building2",
       });
@@ -164,11 +188,23 @@ const AddLocationMap = () => {
       <div>
         <h3 className="mb-2 text-md font-semibold text-slate-700">1. Select map position</h3>
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <CampusMap
+            campusCanvasRef={mapCanvasRef}
+            campusWidth={1400}
+            campusHeight={900}
+            showGrid={true}
+            mapView="2d"
+            activeTool="select"
+            buildings={buildings}
+            campusRoads={roads}
+            campusElements={campusElements}
+            locations={coords ? [{ _id: "draft-location", ...coords, name: "Selected location" }] : []}
+            selectedLocation={coords ? { _id: "draft-location" } : null}
+            onMapPointSelected={handleMapPointSelected}
+          />
           <svg
-            ref={svgRef}
             viewBox="0 0 100 100"
-            className="h-[540px] w-full cursor-crosshair bg-[#dff4d8]"
-            onClick={handleMapClick}
+            className="hidden"
             role="img"
             aria-label="Campus map selector"
           >
@@ -291,14 +327,53 @@ const AddLocationMap = () => {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Floor</label>
-              <input
-                type="number"
-                value={form.floor}
-                onChange={(e) => setForm({ ...form, floor: e.target.value })}
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Building</label>
+              <select
+                value={form.buildingId}
+                onChange={(e) => {
+                  const building = buildings.find((item) => item._id === e.target.value);
+                  setForm({
+                    ...form,
+                    buildingId: e.target.value,
+                    building: building?.name || "",
+                    floor: 0,
+                    floorId: "",
+                  });
+                }}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
-              />
+              >
+                <option value="">Select building</option>
+                {buildings.map((building) => (
+                  <option key={building._id} value={building._id}>
+                    {building.name}
+                  </option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Floor</label>
+            <select
+              value={form.floorId}
+              disabled={!form.buildingId}
+              onChange={(e) => {
+                const floor = floors.find((item) => item._id === e.target.value);
+                setForm({
+                  ...form,
+                  floorId: e.target.value,
+                  floor: floor?.floorNumber ?? floor?.number ?? 0,
+                });
+              }}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
+            >
+              <option value="">Select floor</option>
+              {floors.map((floor) => (
+                <option key={floor._id} value={floor._id}>
+                  {floor.name || `Floor ${floor.floorNumber ?? floor.number ?? 0}`}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

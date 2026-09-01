@@ -155,6 +155,16 @@ const CampusMap = ({
   selectedBuilding,
   selectedRoad,
   selectedCampusElement,
+  locations = [],
+  selectedLocation,
+  onLocationClick,
+  routePath = [],
+  sourceLocation,
+  destinationLocation,
+  onMapPointSelected,
+  readOnly = false,
+  fitToContainer = false,
+  routeLocations = [],
 
   createCampusRoad,
 
@@ -767,6 +777,23 @@ const CampusMap = ({
     setSelectedCampusElement?.(null);
   };
 
+  const mapLocations = Array.isArray(locations)
+    ? locations.filter(
+        (location) =>
+          location &&
+          location.x !== undefined &&
+          location.y !== undefined
+      )
+    : [];
+
+  const routePoints = Array.isArray(routePath)
+    ? routePath
+    : [];
+
+  const routePolyline = routePoints
+    .map((point) => `${Number(point.x)},${Number(point.y)}`)
+    .join(" ");
+
   /* =========================================================
      BACKGROUND CLICK
   ========================================================= */
@@ -774,6 +801,27 @@ const CampusMap = ({
   const handleBackgroundClick = (
     event
   ) => {
+    if (onMapPointSelected) {
+      const svg =
+        campusCanvasRef?.current ||
+        event?.currentTarget?.ownerSVGElement;
+
+      if (svg) {
+        const point = svg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+
+        const matrix = svg.getScreenCTM()?.inverse();
+
+        if (matrix) {
+          const svgPoint = point.matrixTransform(matrix);
+          onMapPointSelected(event, svgPoint);
+        }
+      }
+
+      return;
+    }
+
     /*
       Only handle actual SVG background.
       Building/Road clicks are stopped by
@@ -806,6 +854,20 @@ const CampusMap = ({
     }
   };
 
+  const handleMapPointCapture = (event) => {
+    const svg = campusCanvasRef?.current;
+    if (!svg || !onMapPointSelected) return;
+
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+
+    const matrix = svg.getScreenCTM()?.inverse();
+    if (matrix) {
+      onMapPointSelected(event, point.matrixTransform(matrix));
+    }
+  };
+
   /* =========================================================
      TOOL MESSAGE
   ========================================================= */
@@ -833,7 +895,7 @@ const CampusMap = ({
   return (
     <div
       ref={wrapperRef}
-      className="relative min-w-max"
+      className={fitToContainer ? "relative h-full w-full" : "relative min-w-max"}
     >
       {/* =====================================================
           TOOL MESSAGE
@@ -854,8 +916,8 @@ const CampusMap = ({
       <div
         className="relative rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden"
         style={{
-          width: `${campusWidth}px`,
-          height: `${campusHeight}px`,
+          width: fitToContainer ? "100%" : `${campusWidth}px`,
+          height: fitToContainer ? "100%" : `${campusHeight}px`,
           backgroundImage:
             gridBackground,
           backgroundColor:
@@ -885,6 +947,11 @@ const CampusMap = ({
           }}
           onClick={
             handleBackgroundClick
+          }
+          onClickCapture={
+            onMapPointSelected
+              ? handleMapPointCapture
+              : undefined
           }
         >
           {/* =================================================
@@ -1065,7 +1132,7 @@ const CampusMap = ({
                         ? "cursor-move"
                         : "cursor-default"
                     }
-                    onPointerDown={(
+                    onPointerDown={readOnly ? undefined : (
                       event
                     ) =>
                       handleRoadPointerDown(
@@ -1073,7 +1140,7 @@ const CampusMap = ({
                         road
                       )
                     }
-                    onClick={(
+                    onClick={readOnly ? undefined : (
                       event
                     ) => {
                       event.stopPropagation();
@@ -1253,6 +1320,97 @@ const CampusMap = ({
             })}
           </g>
 
+          {routePolyline && (
+            <>
+              <polyline
+                points={routePolyline}
+                fill="none"
+                stroke="rgba(255,255,255,0.95)"
+                strokeWidth="14"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                pointerEvents="none"
+              />
+
+              <polyline
+                points={routePolyline}
+                fill="none"
+                stroke="#2563eb"
+                strokeWidth="6"
+                strokeDasharray="1 16"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                pointerEvents="none"
+              />
+            </>
+          )}
+
+          {mapLocations.length > 0 && (
+            <g data-layer="location-pins">
+              {mapLocations.map((location) => {
+                const isSelected = selectedLocation?._id === location._id;
+                const pinColor = isSelected ? "#2563eb" : "#ef4444";
+
+                return (
+                  <g
+                    key={
+                      location._id ||
+                      `${location.name}-${location.x}-${location.y}`
+                    }
+                    transform={`translate(${Number(location.x)}, ${Number(location.y)})`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onLocationClick?.(location);
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <circle
+                      r={isSelected ? 28 : 22}
+                      fill={pinColor}
+                      opacity={isSelected ? 0.12 : 0.08}
+                    />
+
+                    <path
+                      d="M0,-26 C-10,-26 -18,-18 -18,-8 C-18,5 -2,22 0,26 C2,22 18,5 18,-8 C18,-18 10,-26 0,-26 Z"
+                      fill={pinColor}
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+
+                    <circle r="7" fill="#ffffff" />
+
+                    <text
+                      x="0"
+                      y="38"
+                      textAnchor="middle"
+                      fontSize="10"
+                      fontWeight="700"
+                      fill="#334155"
+                    >
+                      {location.name?.length > 15
+                        ? `${location.name.slice(0, 14)}...`
+                        : location.name}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          )}
+
+          {sourceLocation && (
+            <g transform={`translate(${Number(sourceLocation.x)}, ${Number(sourceLocation.y)})`}>
+              <circle r="18" fill="#2563eb" stroke="#ffffff" strokeWidth="4" />
+              <circle r="6" fill="#ffffff" />
+            </g>
+          )}
+
+          {destinationLocation && (
+            <g transform={`translate(${Number(destinationLocation.x)}, ${Number(destinationLocation.y)})`}>
+              <circle r="18" fill="#ef4444" stroke="#ffffff" strokeWidth="4" />
+              <circle r="6" fill="#ffffff" />
+            </g>
+          )}
+
           {/* =================================================
               CAMPUS ELEMENTS
           ================================================= */}
@@ -1272,13 +1430,13 @@ const CampusMap = ({
                   element._id
                 }
                 onSelect={
-                  handleCampusElementSelect
+                  readOnly ? undefined : handleCampusElementSelect
                 }
                 onDragEnd={
-                  handleCampusElementDragEnd
+                  readOnly ? undefined : handleCampusElementDragEnd
                 }
                 onResizeEnd={
-                  handleCampusElementResizeEnd
+                  readOnly ? undefined : handleCampusElementResizeEnd
                 }
               />
             ))}
@@ -1318,7 +1476,7 @@ const CampusMap = ({
                       building
                     }
                     activeTool={
-                      activeTool
+                      readOnly ? "view" : activeTool
                     }
                     selected={
                       isSelected
@@ -1358,6 +1516,47 @@ const CampusMap = ({
               }
             )}
           </g>
+
+          {(routeLocations.length > 0 ? routeLocations : mapLocations).length > 0 && (
+            <g data-layer="location-labels">
+              {(routeLocations.length > 0 ? routeLocations : mapLocations).map((location) => (
+                <g
+                  key={`label-${location._id || location.name}`}
+                  transform={`translate(${Number(location.x)}, ${Number(location.y)})`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onLocationClick?.(location);
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
+                  <circle r="14" fill="#ef4444" stroke="#ffffff" strokeWidth="3" />
+                  <circle r="5" fill="#ffffff" />
+                  <rect
+                    x="-70"
+                    y="18"
+                    width="140"
+                    height="24"
+                    rx="6"
+                    fill="#ffffff"
+                    fillOpacity="0.96"
+                    stroke="#cbd5e1"
+                  />
+                  <text
+                    x="0"
+                    y="34"
+                    textAnchor="middle"
+                    fontSize="11"
+                    fontWeight="700"
+                    fill="#1e293b"
+                  >
+                    {location.name?.length > 22
+                      ? `${location.name.slice(0, 21)}...`
+                      : location.name}
+                  </text>
+                </g>
+              ))}
+            </g>
+          )}
 
           {/* =================================================
               EMPTY MAP
