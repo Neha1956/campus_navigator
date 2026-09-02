@@ -178,7 +178,10 @@ const BuildingRenderer = ({
       dragPosition?.y,
       originalY
     );
-
+const rotation = toNumber(
+  building?.rotation,
+  0
+);
   /* =========================================================
      COLOR
   ========================================================= */
@@ -632,12 +635,13 @@ const BuildingRenderer = ({
   ========================================================= */
 
   return (
-    <g
-      data-building-id={
-        buildingId
-      }
-      data-building="true"
-      transform={`translate(${x} ${y})`}
+   <g
+  data-building-id={buildingId}
+  data-building="true"
+  transform={`
+    translate(${x} ${y})
+    rotate(${rotation} ${width / 2} ${height / 2})
+  `}
       onClick={
         handleClick
       }

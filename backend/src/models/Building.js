@@ -49,11 +49,10 @@ const buildingSchema = new mongoose.Schema(
       },
     },
     // Rotation in degrees
-    rotation: {
-      x: { type: Number, default: 0 },
-      y: { type: Number, default: 0 },
-      z: { type: Number, default: 0 },
-    },
+   rotation: {
+  type: Number,
+  default: 0,
+},
     // Building color/texture
     color: {
       type: String,

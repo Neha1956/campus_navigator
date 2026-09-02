@@ -176,49 +176,78 @@ const Home = () => {
           </div>
         )}
 
-        {/* Cards */}
-        {!loading && !error && (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+{/* Cards */}
+{!loading && !error && (
+  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 
-            {locations.map((location) => (
+    {locations.map((location) => {
 
-              <a
-                href={`/locations/${location._id}`}
-                key={location._id}
-                className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/50"
-              >
+      // Primary uploaded image
+      // Agar image nahi hai to fallback icon dikhega
+      const imageUrl =
+        typeof location.image === "string"
+          ? location.image
+          : location.image?.url;
 
-                <div className="flex items-start justify-between">
+      return (
+        <a
+          href={`/locations/${location._id}`}
+          key={location._id}
+          className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/50"
+        >
 
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
-                    <Building2 size={23} />
-                  </div>
+          {/* Location Image */}
+          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-slate-100">
 
-                  <ArrowRight
-                    size={18}
-                    className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-blue-600"
-                  />
-
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={location.name}
+                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
+                  <Building2 size={28} />
                 </div>
+              </div>
+            )}
 
-                <h3 className="mt-5 text-base font-bold text-slate-900">
-                  {location.name}
-                </h3>
-
-                <span className="mt-2 inline-block rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                  {location.category}
-                </span>
-
-                <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">
-                  {location.description}
-                </p>
-
-              </a>
-
-            ))}
+            {/* Arrow */}
+            <div className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm backdrop-blur-sm transition group-hover:bg-blue-600 group-hover:text-white">
+              <ArrowRight
+                size={18}
+                className="transition group-hover:translate-x-1"
+              />
+            </div>
 
           </div>
-        )}
+
+          {/* Content */}
+          <div className="p-5">
+
+            <h3 className="text-base font-bold text-slate-900">
+              {location.name}
+            </h3>
+
+            <span className="mt-2 inline-block rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+              {location.category}
+            </span>
+
+            <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">
+              {location.description || "No description available."}
+            </p>
+
+          </div>
+
+        </a>
+      );
+    })}
+
+  </div>
+)}
+
+
 
       </section>
 

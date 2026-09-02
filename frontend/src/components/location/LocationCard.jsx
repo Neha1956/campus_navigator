@@ -56,9 +56,29 @@ const LocationCard = ({ location }) => {
       {/* Image / Icon Area */}
       <div className="relative flex h-44 items-center justify-center bg-gradient-to-br from-blue-50 via-white to-slate-100">
 
-        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-lg ring-1 ring-slate-100 transition-transform duration-300 group-hover:scale-110">
-          {getIcon()}
-        </div>
+       
+{/* Image / Icon Area */}
+<div className="relative h-44 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-slate-100">
+
+  {location.image ? (
+    <img
+      src={location.image}
+      alt={location.name}
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center">
+      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-lg ring-1 ring-slate-100 transition-transform duration-300 group-hover:scale-110">
+        {getIcon()}
+      </div>
+    </div>
+  )}
+
+ 
+
+</div>
+
+
 
         {/* Active badge */}
         <div className="absolute right-4 top-4">

@@ -70,13 +70,25 @@ const LocationDetailsPage = () => {
     return null;
   }
 
-  // Get all unique images: primary image + gallery images
-  const allImages = [...new Set([
-    ...(selectedLocation.image ? [selectedLocation.image] : []),
-    ...(selectedLocation.images || []),
-  ])];
+  // Get all images: primary image + gallery images
+const rawImages = [
+  selectedLocation.image,
+  ...(selectedLocation.images || []),
+];
 
-  const currentImage = allImages[currentImageIndex] || selectedLocation.image;
+const allImages = [
+  ...new Map(
+    rawImages
+      .filter(Boolean)
+      .map((img) => {
+        const url = typeof img === "string" ? img : img.url;
+        return [url, url];
+      })
+  ).values(),
+];
+
+const currentImage =
+  allImages[currentImageIndex] || null;
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % allImages.length);

@@ -185,9 +185,10 @@ const AddLocationMap = () => {
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <div>
+    <div className="w-full min-w-0">
         <h3 className="mb-2 text-md font-semibold text-slate-700">1. Select map position</h3>
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="w-full min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="h-[650px] w-full min-w-0">
           <CampusMap
             campusCanvasRef={mapCanvasRef}
             campusWidth={1400}
@@ -201,7 +202,9 @@ const AddLocationMap = () => {
             locations={coords ? [{ _id: "draft-location", ...coords, name: "Selected location" }] : []}
             selectedLocation={coords ? { _id: "draft-location" } : null}
             onMapPointSelected={handleMapPointSelected}
+             fitToContainer={true}
           />
+          </div>
           <svg
             viewBox="0 0 100 100"
             className="hidden"

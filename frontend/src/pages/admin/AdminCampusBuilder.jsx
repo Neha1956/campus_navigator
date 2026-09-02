@@ -700,6 +700,36 @@ const AdminCampusBuilder = () => {
       dimensions: { ...(prev.dimensions || {}), [field]: numericValue },
     }));
   };
+  const handleBuildingRotation = (
+  angle = 15,
+  reset = false
+) => {
+  if (!selectedBuilding?._id) return;
+
+  const currentRotation = Number(
+    selectedBuilding.rotation || 0
+  );
+
+  const rotation = reset
+    ? 0
+    : (currentRotation + angle + 360) % 360;
+
+  patchBuildingDraft(
+    selectedBuilding._id,
+    {
+      rotation,
+    }
+  );
+
+  setSelectedBuilding((prev) =>
+    prev
+      ? {
+          ...prev,
+          rotation,
+        }
+      : prev
+  );
+};
 
   /* =======================================================
      BUILDING DRAG — LOCAL ONLY
@@ -1420,6 +1450,7 @@ const AdminCampusBuilder = () => {
               setShowRoadModal={setShowRoadModal}
               handleBuildingSelect={handleBuildingSelect}
               handleOpenBuilding={handleOpenBuilding}
+              handleBuildingRotation={handleBuildingRotation}
             />
           )}
 

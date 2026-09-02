@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Building2,
   Layers3,
@@ -59,6 +58,84 @@ const FloorMap = ({
     );
   }
 
+  /* =========================================================
+     DYNAMIC FLOOR SIZE
+
+     Existing floorWidth / floorHeight ko minimum size
+     ke roop mein rakha gaya hai.
+
+     Jaise-jaise elements floor ke aage add honge,
+     floor automatically expand hoga.
+  ========================================================= */
+
+  const dynamicFloorSize = useMemo(() => {
+    const minimumWidth =
+      Number(floorWidth) || 1200;
+
+    const minimumHeight =
+      Number(floorHeight) || 800;
+
+    /*
+      Extra space:
+      Element ke baad thoda blank area bhi rahega.
+    */
+    const FLOOR_PADDING = 250;
+
+    let requiredWidth = minimumWidth;
+    let requiredHeight = minimumHeight;
+
+    elements.forEach((element) => {
+      const x =
+        Number(element?.position?.x) || 0;
+
+      const y =
+        Number(element?.position?.y) || 0;
+
+      const width =
+        Number(element?.dimensions?.width) || 100;
+
+      const height =
+        Number(element?.dimensions?.height) || 70;
+
+      /*
+        Element ka right-most point
+      */
+      const elementRight =
+        x + width + FLOOR_PADDING;
+
+      /*
+        Element ka bottom-most point
+      */
+      const elementBottom =
+        y + height + FLOOR_PADDING;
+
+      requiredWidth = Math.max(
+        requiredWidth,
+        elementRight
+      );
+
+      requiredHeight = Math.max(
+        requiredHeight,
+        elementBottom
+      );
+    });
+
+    return {
+      width: requiredWidth,
+      height: requiredHeight,
+    };
+  }, [
+    floorWidth,
+    floorHeight,
+    elements,
+  ]);
+
+  const dynamicFloorWidth =
+    dynamicFloorSize.width;
+
+  const dynamicFloorHeight =
+    dynamicFloorSize.height;
+
   return (
     <div>
       {/* =====================================================
@@ -105,11 +182,18 @@ const FloorMap = ({
           onClick={handleCanvasClick}
           className="relative overflow-hidden"
           style={{
-            width: floorWidth,
-            height: floorHeight,
+            /*
+              IMPORTANT:
 
-            minWidth: floorWidth,
-            minHeight: floorHeight,
+              Yahan old floorWidth/floorHeight ki jagah
+              dynamic size use ho raha hai.
+            */
+
+            width: dynamicFloorWidth,
+            height: dynamicFloorHeight,
+
+            minWidth: dynamicFloorWidth,
+            minHeight: dynamicFloorHeight,
 
             backgroundColor:
               currentFloor.backgroundColor ||
@@ -222,21 +306,30 @@ const FloorMap = ({
                   handleElementResizeEnd
                 }
 
+                /*
+                  IMPORTANT:
+
+                  Ab ElementRenderer ko bhi
+                  dynamically calculated floor size
+                  milega.
+
+                  Isse element movement aur resize
+                  naye expanded floor ke according
+                  boundary maintain karega.
+                */
+
                 floorWidth={
-                  floorWidth
+                  dynamicFloorWidth
                 }
 
                 floorHeight={
-                  floorHeight
+                  dynamicFloorHeight
                 }
 
                 /*
                   IMPORTANT:
 
-                  ElementRenderer ko actual canvas ref
-                  dena zaroori hai.
-
-                  Isse screen scaling calculate hogi.
+                  Existing canvas ref same rakha gaya hai.
                 */
 
                 floorCanvasRef={
@@ -275,4 +368,3 @@ const FloorMap = ({
 };
 
 export default FloorMap;
-

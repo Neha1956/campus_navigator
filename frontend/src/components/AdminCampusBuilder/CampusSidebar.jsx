@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 
 import {
   Building2,
@@ -9,6 +9,8 @@ import {
   Dumbbell,
   DoorOpen,
   Route,
+  RotateCcw,
+  RotateCw,
 } from "lucide-react";
 
 const CAMPUS_ELEMENTS = [
@@ -51,9 +53,38 @@ const CampusSidebar = ({
   setShowRoadModal,
   handleBuildingSelect,
   handleOpenBuilding,
-
+  handleBuildingRotation,
   setShowCampusElementModal,
 }) => {
+  /* =====================================================
+      BUILDING SEARCH
+  ===================================================== */
+
+  const [buildingSearch, setBuildingSearch] = useState("");
+
+  const filteredBuildings = useMemo(() => {
+    const search = buildingSearch.trim().toLowerCase();
+
+    if (!search) {
+      return buildings;
+    }
+
+    return buildings.filter((building) => {
+      const name = String(
+        building?.name || ""
+      ).toLowerCase();
+
+      const type = String(
+        building?.type || ""
+      ).toLowerCase();
+
+      return (
+        name.includes(search) ||
+        type.includes(search)
+      );
+    });
+  }, [buildings, buildingSearch]);
+
   return (
     <div className="flex h-full flex-col">
 
@@ -198,6 +229,39 @@ const CampusSidebar = ({
 
         </div>
 
+        {/* =====================================================
+            BUILDING SEARCH
+        ===================================================== */}
+
+        <div className="relative mb-3">
+
+          <input
+            type="text"
+            value={buildingSearch}
+            onChange={(e) =>
+              setBuildingSearch(
+                e.target.value
+              )
+            }
+            placeholder="Search building..."
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 pr-9 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+          />
+
+          {buildingSearch && (
+            <button
+              type="button"
+              onClick={() =>
+                setBuildingSearch("")
+              }
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm font-semibold text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+              title="Clear search"
+            >
+              ×
+            </button>
+          )}
+
+        </div>
+
         {buildingLoading ? (
           <div className="py-6 text-center text-xs text-slate-400">
             Loading buildings...
@@ -206,10 +270,14 @@ const CampusSidebar = ({
           <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">
             No buildings yet.
           </div>
+        ) : filteredBuildings.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">
+            No buildings found.
+          </div>
         ) : (
           <div className="space-y-2">
 
-            {buildings.map(
+            {filteredBuildings.map(
               (building) => {
 
                 const selected =
@@ -281,6 +349,86 @@ const CampusSidebar = ({
         )}
 
       </div>
+
+      {/* =====================================================
+          BUILDING ROTATION
+      ===================================================== */}
+
+      {selectedBuilding && (
+        <div className="border-b border-slate-200 p-4">
+
+          <div className="mb-3 flex items-center justify-between">
+
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Building Rotation
+              </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Rotate selected building
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+              {Number(
+                selectedBuilding.rotation || 0
+              )}°
+            </span>
+
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+
+            {/* ROTATE LEFT */}
+
+            <button
+              type="button"
+              onClick={() =>
+                handleBuildingRotation?.(
+                  -15
+                )
+              }
+              title="Rotate left 15°"
+              className="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-2.5 text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <RotateCcw size={18} />
+            </button>
+
+            {/* RESET */}
+
+            <button
+              type="button"
+              onClick={() =>
+                handleBuildingRotation?.(
+                  0,
+                  true
+                )
+              }
+              title="Reset rotation"
+              className="rounded-lg border border-slate-200 bg-slate-100 p-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-200"
+            >
+              Reset
+            </button>
+
+            {/* ROTATE RIGHT */}
+
+            <button
+              type="button"
+              onClick={() =>
+                handleBuildingRotation?.(
+                  15
+                )
+              }
+              title="Rotate right 15°"
+              className="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-2.5 text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <RotateCw size={18} />
+            </button>
+
+          </div>
+
+        </div>
+      )}
 
     </div>
   );

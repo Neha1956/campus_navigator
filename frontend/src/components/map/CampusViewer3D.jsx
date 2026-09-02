@@ -234,13 +234,95 @@ const Scene = ({
   selectedElement,
   onSelectElement,
 }) => {
-  const width = Number(
+  /* =======================================================
+     EXISTING FLOOR SIZE
+  ======================================================= */
+
+  const baseWidth = Number(
     floor?.width || 1000
   );
 
-  const depth = Number(
+  const baseDepth = Number(
     floor?.height || 700
   );
+
+  /* =======================================================
+     DYNAMIC FLOOR SIZE
+
+     Existing floor size will remain the minimum size.
+
+     If any element goes outside the floor,
+     floor will automatically increase.
+
+     Existing working behaviour is not changed.
+  ======================================================= */
+
+  const FLOOR_PADDING = 100;
+
+  const dynamicFloorSize = React.useMemo(() => {
+    let requiredWidth = baseWidth;
+    let requiredDepth = baseDepth;
+
+    elements.forEach((element) => {
+      const position = getPosition(element);
+      const dimensions = getDimensions(element);
+
+      /* ---------------------------------------------------
+         ELEMENT RIGHT EDGE
+
+         position.x = element starting X
+         width       = element width
+      --------------------------------------------------- */
+
+      const elementRight =
+        position.x + dimensions.width;
+
+      /* ---------------------------------------------------
+         ELEMENT BOTTOM EDGE
+
+         position.y = element starting Y
+         depth      = element depth
+      --------------------------------------------------- */
+
+      const elementBottom =
+        position.y + dimensions.depth;
+
+      /* ---------------------------------------------------
+         ONLY INCREASE FLOOR SIZE
+
+         Never reduce existing floor size.
+      --------------------------------------------------- */
+
+      requiredWidth = Math.max(
+        requiredWidth,
+        elementRight + FLOOR_PADDING
+      );
+
+      requiredDepth = Math.max(
+        requiredDepth,
+        elementBottom + FLOOR_PADDING
+      );
+    });
+
+    return {
+      width: requiredWidth,
+      depth: requiredDepth,
+    };
+  }, [
+    elements,
+    baseWidth,
+    baseDepth,
+  ]);
+
+  /* =======================================================
+     FINAL FLOOR SIZE
+  ======================================================= */
+
+  const width =
+    dynamicFloorSize.width;
+
+  const depth =
+    dynamicFloorSize.depth;
 
   return (
     <>
@@ -252,10 +334,18 @@ const Scene = ({
         castShadow
       />
 
+      {/* =====================================================
+          DYNAMIC FLOOR
+      ===================================================== */}
+
       <FloorBase
         width={width}
         depth={depth}
       />
+
+      {/* =====================================================
+          GRID
+      ===================================================== */}
 
       <Grid
         args={[width, depth]}
@@ -272,7 +362,15 @@ const Scene = ({
         ]}
       />
 
+      {/* =====================================================
+          FLOOR LABEL
+      ===================================================== */}
+
       <FloorLabel floor={floor} />
+
+      {/* =====================================================
+          ELEMENTS
+      ===================================================== */}
 
       {elements.map((element) => (
         <Element3D
@@ -285,6 +383,10 @@ const Scene = ({
           onSelect={onSelectElement}
         />
       ))}
+
+      {/* =====================================================
+          ORBIT CONTROLS
+      ===================================================== */}
 
       <OrbitControls
         enableDamping
@@ -370,3 +472,4 @@ const CampusViewer3D = ({
 };
 
 export default CampusViewer3D;
+

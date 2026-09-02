@@ -141,11 +141,7 @@ export const createBuilding = async (req, res) => {
         depth: dimensions.depth,
         height: dimensions.height,
       },
-      rotation: {
-        x: rotation?.x ?? 0,
-        y: rotation?.y ?? 0,
-        z: rotation?.z ?? 0,
-      },
+     rotation: rotation ?? 0,
       color: color || "#E8E8E8",
       icon: icon || "building",
       image: image || "",
@@ -275,24 +271,9 @@ export const updateBuilding = async (req, res) => {
       };
     }
 
-    if (rotation !== undefined) {
-      existingBuilding.rotation = {
-        x:
-          rotation.x !== undefined
-            ? rotation.x
-            : existingBuilding.rotation.x,
-
-        y:
-          rotation.y !== undefined
-            ? rotation.y
-            : existingBuilding.rotation.y,
-
-        z:
-          rotation.z !== undefined
-            ? rotation.z
-            : existingBuilding.rotation.z,
-      };
-    }
+   if (rotation !== undefined) {
+  existingBuilding.rotation = Number(rotation);
+}
 
     if (color !== undefined) {
       existingBuilding.color = color;
