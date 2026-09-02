@@ -87,12 +87,36 @@ const GRID_SIZE = 20;
    CAMPUS ELEMENT TYPES
 ========================================================= */
 
-const CAMPUS_ELEMENT_TYPES = [
-  "parking",
-  "park",
-  "ground",
-  "small-room",
-];
+const CAMPUS_ELEMENT_TYPES = ["parking", "park", "ground", "small-room"];
+
+/* =========================================================
+   LOCAL-DRAFT HELPERS
+   ---------------------------------------------------------
+   Instead of dispatching an API call on every pointer-move,
+   keystroke or drag-end, every edit is merged into one of
+   these "pending changes" maps (keyed by _id). Nothing
+   touches the database until the user clicks "Save Map".
+========================================================= */
+
+const mergePatch = (base, patch) => {
+  const next = { ...base, ...patch };
+
+  if (patch.position) {
+    next.position = { ...(base.position || {}), ...patch.position };
+  }
+
+  if (patch.dimensions) {
+    next.dimensions = { ...(base.dimensions || {}), ...patch.dimensions };
+  }
+
+  return next;
+};
+
+const applyPending = (entity, pendingMap) => {
+  const patch = pendingMap[entity._id];
+  if (!patch) return entity;
+  return mergePatch(entity, patch);
+};
 
 /* =========================================================
    COMPONENT
@@ -104,212 +128,155 @@ const AdminCampusBuilder = () => {
   /* =======================================================
      REDUX STATE
   ======================================================= */
- const [floorElementDrafts, setFloorElementDrafts] =
-  useState({});
-  const buildingState =
-    useSelector((state) => state.buildings || {});
 
-  const floorState =
-    useSelector((state) => state.floors || {});
-
-  const elementState =
-    useSelector((state) => state.mapElements || {});
-
-  const campusElementState =
-    useSelector((state) => state.campusElements || {});
-
-  const roadState =
-    useSelector((state) => state.roads || {});
+  const buildingState = useSelector((state) => state.buildings || {});
+  const floorState = useSelector((state) => state.floors || {});
+  const elementState = useSelector((state) => state.mapElements || {});
+  const campusElementState = useSelector((state) => state.campusElements || {});
+  const roadState = useSelector((state) => state.roads || {});
 
   /* =======================================================
-     DATA
+     RAW DATA (as it exists in the database right now)
   ======================================================= */
 
-  const buildings =
-    buildingState.buildings || [];
+  const rawBuildings = buildingState.buildings || [];
+  const buildingLoading = buildingState.loading || false;
+  const currentBuilding = buildingState.currentBuilding || null;
 
-  const buildingLoading =
-    buildingState.loading || false;
+  const floors = floorState.floors || [];
+  const floorLoading = floorState.loading || false;
+  const currentFloor = floorState.currentFloor || null;
 
-  const currentBuilding =
-    buildingState.currentBuilding || null;
+  const rawElements = elementState.elements || [];
+  const elementLoading = elementState.loading || false;
 
-  const floors =
-    floorState.floors || [];
+  const rawCampusElements = campusElementState.elements || [];
+  const campusElementLoading = campusElementState.loading || false;
 
-  const floorLoading =
-    floorState.loading || false;
+  const rawRoads = roadState.roads || [];
+  const roadLoading = roadState.loading || false;
 
-  const currentFloor =
-    floorState.currentFloor || null;
+  /* =======================================================
+     LOCAL (UNSAVED) EDITS
+     ---------------------------------------------------------
+     Every drag / resize / property change / position change
+     writes here ONLY. The database is untouched until
+     "Save Map" is pressed.
+  ======================================================= */
 
-  const elements =
-    elementState.elements || [];
-    const renderedElements = elements.map((element) => {
-  const draft =
-    floorElementDrafts[element._id];
+  const [buildingDrafts, setBuildingDrafts] = useState({});
+  const [roadDrafts, setRoadDrafts] = useState({});
+  const [campusElementDrafts, setCampusElementDrafts] = useState({});
+  const [floorElementDrafts, setFloorElementDrafts] = useState({});
 
-  if (!draft) {
-    return element;
-  }
+  const [savingMap, setSavingMap] = useState(false);
 
-  return {
-    ...element,
+  const hasUnsavedChanges =
+    Object.keys(buildingDrafts).length > 0 ||
+    Object.keys(roadDrafts).length > 0 ||
+    Object.keys(campusElementDrafts).length > 0 ||
+    Object.keys(floorElementDrafts).length > 0;
 
-    position: {
-      ...element.position,
-      ...(draft.position || {}),
-    },
+  /* =======================================================
+     MERGED DATA (raw + local drafts) — this is what gets
+     rendered on the map, so edits are visible immediately
+     even though nothing has been saved yet.
+  ======================================================= */
 
-    dimensions: {
-      ...element.dimensions,
-      ...(draft.dimensions || {}),
-    },
-  };
-});
-
-  const elementLoading =
-    elementState.loading || false;
-
-  const campusElements =
-    campusElementState.elements || [];
-
-  const campusElementLoading =
-    campusElementState.loading || false;
-
-  const campusRoads =
-    roadState.roads || [];
-
-  const roadLoading =
-    roadState.loading || false;
+  const buildings = rawBuildings.map((b) => applyPending(b, buildingDrafts));
+  const campusRoads = rawRoads.map((r) => applyPending(r, roadDrafts));
+  const campusElements = rawCampusElements.map((e) => applyPending(e, campusElementDrafts));
+  const renderedElements = rawElements.map((e) => applyPending(e, floorElementDrafts));
 
   /* =======================================================
      MAIN EDITOR STATE
   ======================================================= */
 
-  const [editorMode, setEditorMode] =
-    useState("campus");
-
-  const [mapView, setMapView] =
-    useState("3d");
-
-  const [showGrid, setShowGrid] =
-    useState(true);
-
-  const [activeTool, setActiveTool] =
-    useState("select");
+  const [editorMode, setEditorMode] = useState("campus");
+  const [mapView, setMapView] = useState("3d");
+  const [showGrid, setShowGrid] = useState(true);
+  const [activeTool, setActiveTool] = useState("select");
 
   /* =======================================================
      SELECTION STATE
   ======================================================= */
 
-  const [selectedBuilding, setSelectedBuilding] =
-    useState(null);
-
-  const [selectedRoad, setSelectedRoad] =
-    useState(null);
-
-  const [selectedElement, setSelectedElement] =
-    useState(null);
-   
-
-  const [selectedCampusElement, setSelectedCampusElement] =
-    useState(null);
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [selectedRoad, setSelectedRoad] = useState(null);
+  const [selectedElement, setSelectedElement] = useState(null);
+  const [selectedCampusElement, setSelectedCampusElement] = useState(null);
 
   /* =======================================================
      MODALS
   ======================================================= */
 
-  const [showBuildingModal, setShowBuildingModal] =
-    useState(false);
-
-  const [showFloorModal, setShowFloorModal] =
-    useState(false);
-
-  const [showRoadModal, setShowRoadModal] =
-    useState(false);
+  const [showBuildingModal, setShowBuildingModal] = useState(false);
+  const [showFloorModal, setShowFloorModal] = useState(false);
+  const [showRoadModal, setShowRoadModal] = useState(false);
 
   /* =======================================================
      BUILDING FORM
   ======================================================= */
 
-  const [buildingForm, setBuildingForm] =
-    useState({
-      name: "",
-      description: "",
-      type: "academic",
-      x: 100,
-      y: 100,
-      width: 250,
-      height: 180,
-      color: "#BFDBFE",
-    });
+  const [buildingForm, setBuildingForm] = useState({
+    name: "",
+    description: "",
+    type: "academic",
+    x: 100,
+    y: 100,
+    width: 250,
+    height: 180,
+    color: "#BFDBFE",
+  });
 
   /* =======================================================
      FLOOR FORM
   ======================================================= */
 
-  const [floorForm, setFloorForm] =
-    useState({
-      name: "",
-      floorNumber: 0,
-      width: 1000,
-      height: 700,
-       heightZ: 4,
-      description: "",
-    });
+  const [floorForm, setFloorForm] = useState({
+    name: "",
+    floorNumber: 0,
+    width: 1000,
+    height: 700,
+    heightZ: 4,
+    description: "",
+  });
 
   /* =======================================================
      ROAD FORM
   ======================================================= */
 
-  const [roadForm, setRoadForm] =
-    useState({
-      name: "",
-      type: "road",
-      fromBuilding: "",
-      toBuilding: "",
-      points: [],
-      width: 20,
-      color: "#64748B",
-      distance: 0,
-      walkingTime: 0,
-    });
+  const [roadForm, setRoadForm] = useState({
+    name: "",
+    type: "road",
+    fromBuilding: "",
+    toBuilding: "",
+    points: [],
+    width: 20,
+    color: "#64748B",
+    distance: 0,
+    walkingTime: 0,
+  });
 
   /* =======================================================
      REFS
   ======================================================= */
 
-  const campusCanvasRef =
-    useRef(null);
-
-  const floorCanvasRef =
-    useRef(null);
+  const campusCanvasRef = useRef(null);
+  const floorCanvasRef = useRef(null);
 
   /* =======================================================
      FLOOR DIMENSIONS
   ======================================================= */
 
-  const floorWidth =
-    Number(
-      currentFloor?.width ||
-        floorForm.width ||
-        1000
-    );
-
-  const floorHeight =
-    Number(
-      currentFloor?.height ||
-        floorForm.height ||
-        700
-    );
+  const floorWidth = Number(currentFloor?.width || floorForm.width || 1000);
+  const floorHeight = Number(currentFloor?.height || floorForm.height || 700);
 
   /* =======================================================
      LOCATION SAVING
   ======================================================= */
 
-  const [locationSaving, setLocationSaving] =
-    useState(false);
+  const [locationSaving, setLocationSaving] = useState(false);
 
   /* =======================================================
      LOAD CAMPUS DATA
@@ -327,11 +294,7 @@ const AdminCampusBuilder = () => {
 
   useEffect(() => {
     if (currentBuilding?._id) {
-      dispatch(
-        fetchFloorsByBuilding(
-          currentBuilding._id
-        )
-      );
+      dispatch(fetchFloorsByBuilding(currentBuilding._id));
     }
   }, [currentBuilding?._id, dispatch]);
 
@@ -341,35 +304,45 @@ const AdminCampusBuilder = () => {
 
   useEffect(() => {
     if (currentFloor?._id) {
-      dispatch(
-        fetchMapElementsByFloor(
-          currentFloor._id
-        )
-      );
+      dispatch(fetchMapElementsByFloor(currentFloor._id));
     }
   }, [currentFloor?._id, dispatch]);
+
   useEffect(() => {
-  setFloorElementDrafts({});
-  setSelectedElement(null);
-}, [currentFloor?._id]);
+    setFloorElementDrafts({});
+    setSelectedElement(null);
+  }, [currentFloor?._id]);
+
+  /* =======================================================
+     WARN BEFORE LOSING UNSAVED WORK
+  ======================================================= */
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
 
   /* =======================================================
      GRID SNAP
   ======================================================= */
 
   const snapToGrid = (value) => {
-    const number =
-      Number(value) || 0;
+    const number = Number(value) || 0;
 
     if (!showGrid) {
       return number;
     }
 
-    return (
-      Math.round(
-        number / GRID_SIZE
-      ) * GRID_SIZE
-    );
+    return Math.round(number / GRID_SIZE) * GRID_SIZE;
   };
 
   /* =======================================================
@@ -383,228 +356,173 @@ const AdminCampusBuilder = () => {
     setSelectedCampusElement(null);
   };
 
+  /* =======================================================
+     CONFIRM DISCARD (used before navigating away from
+     unsaved edits, e.g. switching floors / going back)
+  ======================================================= */
 
+  const confirmDiscardIfDirty = () => {
+    if (!hasUnsavedChanges) return true;
 
-//floor map
-const handleElementMove = (
-  element,
-  newX,
-  newY
-) => {
-  if (!element?._id) return;
-
-  const x = Math.round(newX);
-  const y = Math.round(newY);
-
-  setFloorElementDrafts((prev) => ({
-    ...prev,
-
-    [element._id]: {
-      ...(prev[element._id] || {}),
-
-      position: {
-        ...(prev[element._id]?.position || {}),
-        x,
-        y,
-      },
-    },
-  }));
-
-  setSelectedElement((prev) =>
-    prev?._id === element._id
-      ? {
-          ...prev,
-
-          position: {
-            ...(prev.position || {}),
-            x,
-            y,
-          },
-        }
-      : prev
-  );
-};
-const handleElementMoveEnd = async (
-  element,
-  newX,
-  newY
-) => {
-  if (!element?._id) return;
-
-  const position = {
-    ...(element.position || {}),
-    x: Math.round(newX),
-    y: Math.round(newY),
+    return window.confirm(
+      "You have unsaved changes on the map. Continue and lose them? Click Cancel and press \"Save Map\" first if you want to keep them."
+    );
   };
 
-  try {
-    await dispatch(
-      updateElementPosition({
-        id: element._id,
-        position,
-      })
-    ).unwrap();
+  /* =======================================================
+     SAVE MAP — the only place that writes edits to the DB
+  ======================================================= */
 
-    setFloorElementDrafts((prev) => {
-      const next = { ...prev };
+  const handleSaveMap = async () => {
+    if (!hasUnsavedChanges || savingMap) return;
 
-      delete next[element._id];
+    setSavingMap(true);
 
-      return next;
-    });
+    try {
+      // ---- Buildings ----
+      for (const id of Object.keys(buildingDrafts)) {
+        await dispatch(updateBuilding({ id, data: buildingDrafts[id] })).unwrap();
+      }
+
+      // ---- Roads ----
+      for (const id of Object.keys(roadDrafts)) {
+        await dispatch(updateRoad({ id, data: roadDrafts[id] })).unwrap();
+      }
+
+      // ---- Campus elements ----
+      for (const id of Object.keys(campusElementDrafts)) {
+        await dispatch(updateCampusElement({ id, data: campusElementDrafts[id] })).unwrap();
+      }
+
+      // ---- Floor elements ----
+      for (const id of Object.keys(floorElementDrafts)) {
+        const patch = floorElementDrafts[id];
+        const original = rawElements.find((el) => el._id === id);
+
+        if (!original) continue;
+
+        if (patch.position) {
+          await dispatch(
+            updateElementPosition({
+              id,
+              position: { ...(original.position || {}), ...patch.position },
+            })
+          ).unwrap();
+        }
+
+        if (patch.dimensions) {
+          await dispatch(
+            updateElementDimensions({
+              id,
+              dimensions: { ...(original.dimensions || {}), ...patch.dimensions },
+            })
+          ).unwrap();
+        }
+
+        const otherFields = { ...patch };
+        delete otherFields.position;
+        delete otherFields.dimensions;
+
+        if (Object.keys(otherFields).length > 0) {
+          await dispatch(updateMapElement({ id, data: otherFields })).unwrap();
+        }
+      }
+
+      // ---- Clear drafts & refresh from server ----
+      setBuildingDrafts({});
+      setRoadDrafts({});
+      setCampusElementDrafts({});
+      setFloorElementDrafts({});
+
+      dispatch(fetchBuildings());
+      dispatch(fetchRoads());
+      dispatch(fetchCampusElements());
+
+      if (currentFloor?._id) {
+        dispatch(fetchMapElementsByFloor(currentFloor._id));
+      }
+
+      alert("Map saved successfully.");
+    } catch (error) {
+      console.error("Save map error:", error);
+
+      alert(
+        error?.message ||
+          "Failed to save some changes. Nothing else was lost — fix the issue and click Save Map again."
+      );
+    } finally {
+      setSavingMap(false);
+    }
+  };
+
+  /* =======================================================
+     FLOOR ELEMENT — MOVE (local only)
+  ======================================================= */
+
+  const handleElementMove = (element, newX, newY) => {
+    if (!element?._id) return;
+
+    const x = Math.round(newX);
+    const y = Math.round(newY);
+
+    setFloorElementDrafts((prev) => ({
+      ...prev,
+      [element._id]: mergePatch(prev[element._id] || {}, { position: { x, y } }),
+    }));
 
     setSelectedElement((prev) =>
       prev?._id === element._id
-        ? {
-            ...prev,
-            position,
-          }
+        ? { ...prev, position: { ...(prev.position || {}), x, y } }
         : prev
     );
-
-    if (currentFloor?._id) {
-      dispatch(
-        fetchMapElementsByFloor(
-          currentFloor._id
-        )
-      );
-    }
-  } catch (error) {
-    console.error(
-      "Floor element move save error:",
-      error
-    );
-
-    setFloorElementDrafts((prev) => {
-      const next = { ...prev };
-
-      delete next[element._id];
-
-      return next;
-    });
-  }
-};
-
-const handleElementResize = (
-  element,
-  newWidth,
-  newHeight
-) => {
-  if (!element?._id) return;
-
-  const width = Math.round(newWidth);
-  const height = Math.round(newHeight);
-
-  setFloorElementDrafts((prev) => ({
-    ...prev,
-
-    [element._id]: {
-      ...(prev[element._id] || {}),
-
-      dimensions: {
-        ...(prev[element._id]?.dimensions || {}),
-        width,
-        height,
-      },
-    },
-  }));
-
-  setSelectedElement((prev) =>
-    prev?._id === element._id
-      ? {
-          ...prev,
-
-          dimensions: {
-            ...(prev.dimensions || {}),
-            width,
-            height,
-          },
-        }
-      : prev
-  );
-};
-const handleElementResizeEnd = async (
-  element,
-  newWidth,
-  newHeight
-) => {
-  if (!element?._id) return;
-
-  const dimensions = {
-    ...(element.dimensions || {}),
-
-    width: Math.round(newWidth),
-
-    height: Math.round(newHeight),
   };
 
-  try {
-    await dispatch(
-      updateElementDimensions({
-        id: element._id,
-        dimensions,
-      })
-    ).unwrap();
+  const handleElementMoveEnd = (element, newX, newY) => {
+    // Drag has ended — the draft written by handleElementMove already
+    // holds the final position. Nothing to save right now; that
+    // happens only when the user clicks "Save Map".
+    handleElementMove(element, newX, newY);
+  };
 
-    setFloorElementDrafts((prev) => {
-      const next = { ...prev };
+  /* =======================================================
+     FLOOR ELEMENT — RESIZE (local only)
+  ======================================================= */
 
-      delete next[element._id];
+  const handleElementResize = (element, newWidth, newHeight) => {
+    if (!element?._id) return;
 
-      return next;
-    });
+    const width = Math.round(newWidth);
+    const height = Math.round(newHeight);
+
+    setFloorElementDrafts((prev) => ({
+      ...prev,
+      [element._id]: mergePatch(prev[element._id] || {}, { dimensions: { width, height } }),
+    }));
 
     setSelectedElement((prev) =>
       prev?._id === element._id
-        ? {
-            ...prev,
-            dimensions,
-          }
+        ? { ...prev, dimensions: { ...(prev.dimensions || {}), width, height } }
         : prev
     );
+  };
 
-    if (currentFloor?._id) {
-      dispatch(
-        fetchMapElementsByFloor(
-          currentFloor._id
-        )
-      );
-    }
-  } catch (error) {
-    console.error(
-      "Floor element resize save error:",
-      error
-    );
-
-    setFloorElementDrafts((prev) => {
-      const next = { ...prev };
-
-      delete next[element._id];
-
-      return next;
-    });
-  }
-};
-
+  const handleElementResizeEnd = (element, newWidth, newHeight) => {
+    handleElementResize(element, newWidth, newHeight);
+  };
 
   /* =======================================================
      BUILDING SELECT
   ======================================================= */
 
-  const handleBuildingSelect = (
-    building
-  ) => {
+  const handleBuildingSelect = (building) => {
     if (!building) return;
 
     setSelectedBuilding(building);
-
     setSelectedRoad(null);
     setSelectedElement(null);
     setSelectedCampusElement(null);
 
-    dispatch(
-      setCurrentBuilding(building)
-    );
+    dispatch(setCurrentBuilding(building));
 
     setActiveTool("select");
   };
@@ -613,13 +531,9 @@ const handleElementResizeEnd = async (
      OPEN BUILDING
   ======================================================= */
 
-  const handleOpenBuilding = (
-    building
-  ) => {
+  const handleOpenBuilding = (building) => {
     handleBuildingSelect(building);
-
     setEditorMode("floor");
-
     setActiveTool("select");
   };
 
@@ -628,27 +542,24 @@ const handleElementResizeEnd = async (
   ======================================================= */
 
   const handleBackToCampus = () => {
+    if (!confirmDiscardIfDirty()) return;
+
     setEditorMode("campus");
-
     setActiveTool("select");
-
     clearSelections();
+    setFloorElementDrafts({});
 
-    dispatch(
-      setCurrentFloor(null)
-    );
+    dispatch(setCurrentFloor(null));
   };
 
   /* =======================================================
      FLOOR SELECT
   ======================================================= */
 
-  const handleFloorSelect = (
-    floor
-  ) => {
-    dispatch(
-      setCurrentFloor(floor)
-    );
+  const handleFloorSelect = (floor) => {
+    if (currentFloor?._id !== floor?._id && !confirmDiscardIfDirty()) return;
+
+    dispatch(setCurrentFloor(floor));
 
     setSelectedElement(null);
     setSelectedRoad(null);
@@ -659,2047 +570,823 @@ const handleElementResizeEnd = async (
 
   /* =======================================================
      CREATE BUILDING
+     (a one-off click, not a repeated event — still saved
+     immediately so the new building gets a real _id)
   ======================================================= */
 
-  const handleCreateBuilding =
-    async () => {
-      if (
-        !buildingForm.name.trim()
-      ) {
-        alert(
-          "Please enter building name"
-        );
-        return;
-      }
+  const handleCreateBuilding = async () => {
+    if (!buildingForm.name.trim()) {
+      alert("Please enter building name");
+      return;
+    }
 
-      const data = {
-        name:
-          buildingForm.name.trim(),
+    const data = {
+      name: buildingForm.name.trim(),
+      description: buildingForm.description,
+      type: buildingForm.type,
 
-        description:
-          buildingForm.description,
+      position: {
+        x: snapToGrid(buildingForm.x),
+        y: snapToGrid(buildingForm.y),
+        z: 0,
+      },
 
-        type:
-          buildingForm.type,
+      dimensions: {
+        width: Number(buildingForm.width) || 250,
+        height: Number(buildingForm.height) || 180,
+        depth: Number(buildingForm.height) || 180,
+      },
 
-        position: {
-          x: snapToGrid(
-            buildingForm.x
-          ),
-          y: snapToGrid(
-            buildingForm.y
-          ),
-          z: 0,
-        },
-
-        dimensions: {
-          width:
-            Number(
-              buildingForm.width
-            ) || 250,
-
-          height:
-            Number(
-              buildingForm.height
-            ) || 180,
-
-          depth:
-            Number(
-              buildingForm.height
-            ) || 180,
-        },
-
-        color:
-          buildingForm.color,
-      };
-
-      try {
-        await dispatch(
-          createBuilding(data)
-        ).unwrap();
-
-        setShowBuildingModal(false);
-
-        setBuildingForm({
-          name: "",
-          description: "",
-          type: "academic",
-          x: 100,
-          y: 100,
-          width: 250,
-          height: 180,
-          color: "#BFDBFE",
-        });
-
-        dispatch(fetchBuildings());
-      } catch (error) {
-        console.error(
-          "Create building error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to create building"
-        );
-      }
+      color: buildingForm.color,
     };
+
+    try {
+      await dispatch(createBuilding(data)).unwrap();
+
+      setShowBuildingModal(false);
+
+      setBuildingForm({
+        name: "",
+        description: "",
+        type: "academic",
+        x: 100,
+        y: 100,
+        width: 250,
+        height: 180,
+        color: "#BFDBFE",
+      });
+
+      dispatch(fetchBuildings());
+    } catch (error) {
+      console.error("Create building error:", error);
+      alert(error?.message || "Failed to create building");
+    }
+  };
 
   /* =======================================================
      BUILDING DELETE
   ======================================================= */
 
-  const handleDeleteBuilding =
-    async (id) => {
-      if (!id) return;
+  const handleDeleteBuilding = async (id) => {
+    if (!id) return;
 
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this building?"
-        );
+    const confirmed = window.confirm("Are you sure you want to delete this building?");
+    if (!confirmed) return;
 
-      if (!confirmed) return;
+    try {
+      await dispatch(deleteBuilding(id)).unwrap();
 
-      try {
-        await dispatch(
-          deleteBuilding(id)
-        ).unwrap();
+      setSelectedBuilding(null);
+      setBuildingDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
 
-        setSelectedBuilding(null);
-
-        dispatch(fetchBuildings());
-      } catch (error) {
-        console.error(
-          "Delete building error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to delete building"
-        );
-      }
-    };
+      dispatch(fetchBuildings());
+    } catch (error) {
+      console.error("Delete building error:", error);
+      alert(error?.message || "Failed to delete building");
+    }
+  };
 
   /* =======================================================
-     BUILDING PROPERTY UPDATE
+     BUILDING PROPERTY / POSITION / DIMENSION — LOCAL ONLY
+     ---------------------------------------------------------
+     These used to dispatch an API call on every keystroke.
+     That is what was hammering the database. Now they only
+     write to buildingDrafts; "Save Map" persists them.
   ======================================================= */
 
-  const handleBuildingPropertyChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedBuilding?._id
-      ) {
-        return;
-      }
+  const patchBuildingDraft = (id, patch) => {
+    setBuildingDrafts((prev) => ({
+      ...prev,
+      [id]: mergePatch(prev[id] || {}, patch),
+    }));
+  };
 
-      try {
-        const saved =
-          await dispatch(
-            updateBuilding({
-              id:
-                selectedBuilding._id,
+  const handleBuildingPropertyChange = (field, value) => {
+    if (!selectedBuilding?._id) return;
 
-              data: {
-                [field]: value,
-              },
-            })
-          ).unwrap();
+    patchBuildingDraft(selectedBuilding._id, { [field]: value });
 
-        setSelectedBuilding(
-          saved || {
-            ...selectedBuilding,
-            [field]: value,
-          }
-        );
+    setSelectedBuilding((prev) => ({ ...prev, [field]: value }));
+  };
 
-        dispatch(
-          fetchBuildings()
-        );
-      } catch (error) {
-        console.error(
-          "Building property update error:",
-          error
-        );
+  const handleBuildingPositionChange = (field, value) => {
+    if (!selectedBuilding?._id) return;
 
-        alert(
-          error?.message ||
-            "Failed to update building"
-        );
-      }
-    };
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return;
+
+    patchBuildingDraft(selectedBuilding._id, { position: { [field]: numericValue } });
+
+    setSelectedBuilding((prev) => ({
+      ...prev,
+      position: { ...(prev.position || {}), [field]: numericValue },
+    }));
+  };
+
+  const handleBuildingDimensionChange = (field, value) => {
+    if (!selectedBuilding?._id) return;
+
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return;
+
+    patchBuildingDraft(selectedBuilding._id, { dimensions: { [field]: numericValue } });
+
+    setSelectedBuilding((prev) => ({
+      ...prev,
+      dimensions: { ...(prev.dimensions || {}), [field]: numericValue },
+    }));
+  };
 
   /* =======================================================
-     BUILDING POSITION UPDATE
+     BUILDING DRAG — LOCAL ONLY
   ======================================================= */
 
-  const handleBuildingPositionChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedBuilding?._id
-      ) {
-        return;
-      }
+  const handleBuildingDragEnd = (building, position) => {
+    if (!building?._id) return;
 
-      const numericValue =
-        Number(value);
+    patchBuildingDraft(building._id, { position });
 
-      if (
-        !Number.isFinite(
-          numericValue
-        )
-      ) {
-        return;
-      }
-
-      const position = {
-        ...(selectedBuilding.position ||
-          {}),
-        [field]: numericValue,
-      };
-
-      const updated = {
-        ...selectedBuilding,
-        position,
-      };
-
-      setSelectedBuilding(updated);
-
-      try {
-        const saved =
-          await dispatch(
-            updateBuilding({
-              id:
-                selectedBuilding._id,
-
-              data: {
-                position,
-              },
-            })
-          ).unwrap();
-
-        if (saved) {
-          setSelectedBuilding(
-            saved
-          );
-        }
-
-        dispatch(
-          fetchBuildings()
-        );
-      } catch (error) {
-        console.error(
-          "Building position update error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to update building position"
-        );
-      }
-    };
-
-  /* =======================================================
-     BUILDING DIMENSION UPDATE
-  ======================================================= */
-
-  const handleBuildingDimensionChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedBuilding?._id
-      ) {
-        return;
-      }
-
-      const numericValue =
-        Number(value);
-
-      if (
-        !Number.isFinite(
-          numericValue
-        ) ||
-        numericValue <= 0
-      ) {
-        return;
-      }
-
-      const dimensions = {
-        ...(selectedBuilding.dimensions ||
-          {}),
-        [field]: numericValue,
-      };
-
-      const updated = {
-        ...selectedBuilding,
-        dimensions,
-      };
-
-      setSelectedBuilding(updated);
-
-      try {
-        const saved =
-          await dispatch(
-            updateBuilding({
-              id:
-                selectedBuilding._id,
-
-              data: {
-                dimensions,
-              },
-            })
-          ).unwrap();
-
-        if (saved) {
-          setSelectedBuilding(
-            saved
-          );
-        }
-
-        dispatch(
-          fetchBuildings()
-        );
-      } catch (error) {
-        console.error(
-          "Building dimension update error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to update building dimensions"
-        );
-      }
-    };
-
-  /* =======================================================
-     BUILDING DRAG
-  ======================================================= */
-
-  const handleBuildingDragEnd =
-    async (
-      building,
-      position
-    ) => {
-      if (!building?._id) {
-        return;
-      }
-
-      const updatedPosition = {
-        ...(building.position ||
-          {}),
-        ...position,
-      };
-
-      try {
-        const saved =
-          await dispatch(
-            updateBuilding({
-              id: building._id,
-
-              data: {
-                position:
-                  updatedPosition,
-              },
-            })
-          ).unwrap();
-
-        setSelectedBuilding(
-          saved || {
-            ...building,
-            position:
-              updatedPosition,
-          }
-        );
-
-        dispatch(
-          fetchBuildings()
-        );
-      } catch (error) {
-        console.error(
-          "Building drag error:",
-          error
-        );
-      }
-    };
+    setSelectedBuilding((prev) =>
+      prev?._id === building._id
+        ? { ...prev, position: { ...(prev.position || {}), ...position } }
+        : prev
+    );
+  };
 
   /* =======================================================
      CREATE CAMPUS ELEMENT
+     (single click action — saved immediately for a real _id)
   ======================================================= */
 
-  const handleCreateCampusElement =
-    async (
-      data
-    ) => {
-      if (!data) return;
+  const handleCreateCampusElement = async (data) => {
+    if (!data) return;
 
-      try {
-        await dispatch(
-          createCampusElement(
-            data
-          )
-        ).unwrap();
-
-        await dispatch(
-          fetchCampusElements()
-        );
-
-        setActiveTool("select");
-      } catch (error) {
-        console.error(
-          "Create campus element error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to create campus element"
-        );
-      }
-    };
+    try {
+      await dispatch(createCampusElement(data)).unwrap();
+      await dispatch(fetchCampusElements());
+      setActiveTool("select");
+    } catch (error) {
+      console.error("Create campus element error:", error);
+      alert(error?.message || "Failed to create campus element");
+    }
+  };
 
   /* =======================================================
      CAMPUS MAP CLICK
   ======================================================= */
 
-  const handleCampusCanvasClick =
-    (event) => {
-      if (
-        !event ||
-        !campusCanvasRef.current
-      ) {
-        return;
-      }
+  const handleCampusCanvasClick = (event) => {
+    if (!event || !campusCanvasRef.current) return;
+    if (!CAMPUS_ELEMENT_TYPES.includes(activeTool)) return;
 
-      if (
-        !CAMPUS_ELEMENT_TYPES.includes(
-          activeTool
-        )
-      ) {
-        return;
-      }
+    const svg = campusCanvasRef.current;
+    const point = svg.createSVGPoint();
 
-      const svg =
-        campusCanvasRef.current;
+    point.x = event.clientX;
+    point.y = event.clientY;
 
-      const point =
-        svg.createSVGPoint();
+    const matrix = svg.getScreenCTM()?.inverse();
+    if (!matrix) return;
 
-      point.x =
-        event.clientX;
+    const svgPoint = point.matrixTransform(matrix);
 
-      point.y =
-        event.clientY;
-
-      const matrix =
-        svg
-          .getScreenCTM()
-          ?.inverse();
-
-      if (!matrix) {
-        return;
-      }
-
-      const svgPoint =
-        point.matrixTransform(
-          matrix
-        );
-
-      const defaultColors = {
-        parking: "#CBD5E1",
-        park: "#BBF7D0",
-        ground: "#FDE68A",
-        "small-room":
-          "#C4B5FD",
-      };
-
-      const dimensions = {
-        parking: {
-          width: 220,
-          height: 130,
-        },
-
-        park: {
-          width: 220,
-          height: 160,
-        },
-
-        ground: {
-          width: 280,
-          height: 180,
-        },
-
-        "small-room": {
-          width: 150,
-          height: 100,
-        },
-      };
-
-      const size =
-        dimensions[activeTool] ||
-        dimensions["small-room"];
-
-      const data = {
-        name:
-          activeTool
-            .replace("-", " ")
-            .replace(
-              /\b\w/g,
-              (letter) =>
-                letter.toUpperCase()
-            ),
-
-        type: activeTool,
-
-        position: {
-          x: Math.max(
-            0,
-            snapToGrid(
-              svgPoint.x
-            )
-          ),
-
-          y: Math.max(
-            0,
-            snapToGrid(
-              svgPoint.y
-            )
-          ),
-
-          z: 0,
-        },
-
-        dimensions: {
-          width:
-            size.width,
-
-          height:
-            size.height,
-
-          depth:
-            size.height,
-        },
-
-        color:
-          defaultColors[
-            activeTool
-          ] ||
-          "#CBD5E1",
-
-        strokeColor:
-          "#334155",
-
-        strokeWidth: 2,
-
-        rotation: 0,
-      };
-
-      handleCreateCampusElement(
-        data
-      );
+    const defaultColors = {
+      parking: "#CBD5E1",
+      park: "#BBF7D0",
+      ground: "#FDE68A",
+      "small-room": "#C4B5FD",
     };
+
+    const dimensions = {
+      parking: { width: 220, height: 130 },
+      park: { width: 220, height: 160 },
+      ground: { width: 280, height: 180 },
+      "small-room": { width: 150, height: 100 },
+    };
+
+    const size = dimensions[activeTool] || dimensions["small-room"];
+
+    const data = {
+      name: activeTool.replace("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
+      type: activeTool,
+
+      position: {
+        x: Math.max(0, snapToGrid(svgPoint.x)),
+        y: Math.max(0, snapToGrid(svgPoint.y)),
+        z: 0,
+      },
+
+      dimensions: {
+        width: size.width,
+        height: size.height,
+        depth: size.height,
+      },
+
+      color: defaultColors[activeTool] || "#CBD5E1",
+      strokeColor: "#334155",
+      strokeWidth: 2,
+      rotation: 0,
+    };
+
+    handleCreateCampusElement(data);
+  };
 
   /* =======================================================
      CAMPUS ELEMENT SELECT
   ======================================================= */
 
-  const handleCampusElementSelect =
-    (element) => {
-      if (!element) return;
+  const handleCampusElementSelect = (element) => {
+    if (!element) return;
 
-      setSelectedCampusElement(
-        element
-      );
+    setSelectedCampusElement(element);
+    setSelectedBuilding(null);
+    setSelectedRoad(null);
+    setSelectedElement(null);
 
-      setSelectedBuilding(null);
-      setSelectedRoad(null);
-      setSelectedElement(null);
-
-      setActiveTool("select");
-    };
+    setActiveTool("select");
+  };
 
   /* =======================================================
-     CAMPUS ELEMENT DRAG
+     CAMPUS ELEMENT — DRAG / RESIZE / PROPERTY — LOCAL ONLY
   ======================================================= */
 
-  const handleCampusElementDragEnd =
-    async (
-      element,
-      position
-    ) => {
-      if (!element?._id) {
-        return;
-      }
+  const patchCampusElementDraft = (id, patch) => {
+    setCampusElementDrafts((prev) => ({
+      ...prev,
+      [id]: mergePatch(prev[id] || {}, patch),
+    }));
+  };
 
-      const updated = {
-        ...element,
+  const handleCampusElementDragEnd = (element, position) => {
+    if (!element?._id) return;
 
-        position: {
-          ...(element.position ||
-            {}),
-          ...position,
-        },
-      };
+    patchCampusElementDraft(element._id, { position });
 
-      setSelectedCampusElement(
-        updated
-      );
+    setSelectedCampusElement((prev) =>
+      prev?._id === element._id
+        ? { ...prev, position: { ...(prev.position || {}), ...position } }
+        : prev
+    );
+  };
 
-      try {
-        const saved =
-          await dispatch(
-            updateCampusElement({
-              id:
-                element._id,
+  const handleCampusElementResizeEnd = (element, dimensions) => {
+    if (!element?._id) return;
 
-              data: {
-                position:
-                  updated.position,
-              },
-            })
-          ).unwrap();
+    patchCampusElementDraft(element._id, { dimensions });
 
-        if (saved) {
-          setSelectedCampusElement(
-            saved
-          );
-        }
+    setSelectedCampusElement((prev) =>
+      prev?._id === element._id
+        ? { ...prev, dimensions: { ...(prev.dimensions || {}), ...dimensions } }
+        : prev
+    );
+  };
 
-        dispatch(
-          fetchCampusElements()
-        );
-      } catch (error) {
-        console.error(
-          "Campus element drag error:",
-          error
-        );
-      }
-    };
+  const handleCampusElementPropertyChange = (field, value) => {
+    if (!selectedCampusElement?._id) return;
 
-  /* =======================================================
-     CAMPUS ELEMENT RESIZE
-  ======================================================= */
+    patchCampusElementDraft(selectedCampusElement._id, { [field]: value });
 
-  const handleCampusElementResizeEnd =
-    async (
-      element,
-      dimensions
-    ) => {
-      if (!element?._id) {
-        return;
-      }
+    setSelectedCampusElement((prev) => ({ ...prev, [field]: value }));
+  };
 
-      const updated = {
-        ...element,
+  const handleCampusElementPositionChange = (field, value) => {
+    if (!selectedCampusElement?._id) return;
 
-        dimensions: {
-          ...(element.dimensions ||
-            {}),
-          ...dimensions,
-        },
-      };
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return;
 
-      setSelectedCampusElement(
-        updated
-      );
+    patchCampusElementDraft(selectedCampusElement._id, { position: { [field]: numericValue } });
 
-      try {
-        const saved =
-          await dispatch(
-            updateCampusElement({
-              id:
-                element._id,
+    setSelectedCampusElement((prev) => ({
+      ...prev,
+      position: { ...(prev.position || {}), [field]: numericValue },
+    }));
+  };
 
-              data: {
-                dimensions:
-                  updated.dimensions,
-              },
-            })
-          ).unwrap();
+  const handleCampusElementDimensionChange = (field, value) => {
+    if (!selectedCampusElement?._id) return;
 
-        if (saved) {
-          setSelectedCampusElement(
-            saved
-          );
-        }
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return;
 
-        dispatch(
-          fetchCampusElements()
-        );
-      } catch (error) {
-        console.error(
-          "Campus element resize error:",
-          error
-        );
-      }
-    };
+    patchCampusElementDraft(selectedCampusElement._id, { dimensions: { [field]: numericValue } });
 
-  /* =======================================================
-     CAMPUS ELEMENT PROPERTY UPDATE
-  ======================================================= */
-
-  const handleCampusElementPropertyChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedCampusElement?._id
-      ) {
-        return;
-      }
-
-      const updated = {
-        ...selectedCampusElement,
-        [field]: value,
-      };
-
-      setSelectedCampusElement(
-        updated
-      );
-
-      try {
-        const saved =
-          await dispatch(
-            updateCampusElement({
-              id:
-                selectedCampusElement._id,
-
-              data: {
-                [field]: value,
-              },
-            })
-          ).unwrap();
-
-        if (saved) {
-          setSelectedCampusElement(
-            saved
-          );
-        }
-
-        dispatch(
-          fetchCampusElements()
-        );
-      } catch (error) {
-        console.error(
-          "Campus element property error:",
-          error
-        );
-      }
-    };
-
-  /* =======================================================
-     CAMPUS ELEMENT POSITION UPDATE
-  ======================================================= */
-
-  const handleCampusElementPositionChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedCampusElement?._id
-      ) {
-        return;
-      }
-
-      const numericValue =
-        Number(value);
-
-      if (
-        !Number.isFinite(
-          numericValue
-        )
-      ) {
-        return;
-      }
-
-      const position = {
-        ...(selectedCampusElement.position ||
-          {}),
-        [field]: numericValue,
-      };
-
-      const updated = {
-        ...selectedCampusElement,
-        position,
-      };
-
-      setSelectedCampusElement(
-        updated
-      );
-
-      try {
-        const saved =
-          await dispatch(
-            updateCampusElement({
-              id:
-                selectedCampusElement._id,
-
-              data: {
-                position,
-              },
-            })
-          ).unwrap();
-
-        if (saved) {
-          setSelectedCampusElement(
-            saved
-          );
-        }
-
-        dispatch(
-          fetchCampusElements()
-        );
-      } catch (error) {
-        console.error(
-          "Campus element position error:",
-          error
-        );
-      }
-    };
-
-  /* =======================================================
-     CAMPUS ELEMENT DIMENSION UPDATE
-  ======================================================= */
-
-  const handleCampusElementDimensionChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedCampusElement?._id
-      ) {
-        return;
-      }
-
-      const numericValue =
-        Number(value);
-
-      if (
-        !Number.isFinite(
-          numericValue
-        ) ||
-        numericValue <= 0
-      ) {
-        return;
-      }
-
-      const dimensions = {
-        ...(selectedCampusElement.dimensions ||
-          {}),
-        [field]:
-          numericValue,
-      };
-
-      const updated = {
-        ...selectedCampusElement,
-        dimensions,
-      };
-
-      setSelectedCampusElement(
-        updated
-      );
-
-      try {
-        const saved =
-          await dispatch(
-            updateCampusElement({
-              id:
-                selectedCampusElement._id,
-
-              data: {
-                dimensions,
-              },
-            })
-          ).unwrap();
-
-        if (saved) {
-          setSelectedCampusElement(
-            saved
-          );
-        }
-
-        dispatch(
-          fetchCampusElements()
-        );
-      } catch (error) {
-        console.error(
-          "Campus element dimension error:",
-          error
-        );
-      }
-    };
+    setSelectedCampusElement((prev) => ({
+      ...prev,
+      dimensions: { ...(prev.dimensions || {}), [field]: numericValue },
+    }));
+  };
 
   /* =======================================================
      CAMPUS ELEMENT DELETE
   ======================================================= */
 
-  const handleDeleteCampusElement =
-    async (
-      id
-    ) => {
-      if (!id) return;
+  const handleDeleteCampusElement = async (id) => {
+    if (!id) return;
 
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this campus element?"
-        );
+    const confirmed = window.confirm("Are you sure you want to delete this campus element?");
+    if (!confirmed) return;
 
-      if (!confirmed) {
-        return;
-      }
+    try {
+      await dispatch(deleteCampusElement(id)).unwrap();
 
-      try {
-        await dispatch(
-          deleteCampusElement(id)
-        ).unwrap();
+      setSelectedCampusElement(null);
+      setCampusElementDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
 
-        setSelectedCampusElement(
-          null
-        );
-
-        dispatch(
-          fetchCampusElements()
-        );
-      } catch (error) {
-        console.error(
-          "Delete campus element error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to delete campus element"
-        );
-      }
-    };
+      dispatch(fetchCampusElements());
+    } catch (error) {
+      console.error("Delete campus element error:", error);
+      alert(error?.message || "Failed to delete campus element");
+    }
+  };
 
   /* =======================================================
      CREATE ROAD
+     (single click action — saved immediately for a real _id)
   ======================================================= */
 
-  const handleCreateRoad =
-    async () => {
-      if (
-        !roadForm.name.trim()
-      ) {
-        alert(
-          "Please enter road name"
-        );
-        return;
-      }
+  const handleCreateRoad = async () => {
+    if (!roadForm.name.trim()) {
+      alert("Please enter road name");
+      return;
+    }
 
-      if (
-        !roadForm.fromBuilding ||
-        !roadForm.toBuilding
-      ) {
-        alert(
-          "Please select both buildings"
-        );
-        return;
-      }
+    if (!roadForm.fromBuilding || !roadForm.toBuilding) {
+      alert("Please select both buildings");
+      return;
+    }
 
-      if (
-        roadForm.fromBuilding ===
-        roadForm.toBuilding
-      ) {
-        alert(
-          "From Building and To Building cannot be same"
-        );
-        return;
-      }
+    if (roadForm.fromBuilding === roadForm.toBuilding) {
+      alert("From Building and To Building cannot be same");
+      return;
+    }
 
-      const fromBuilding =
-        buildings.find(
-          (building) =>
-            building._id ===
-            roadForm.fromBuilding
-        );
+    const fromBuilding = buildings.find((building) => building._id === roadForm.fromBuilding);
+    const toBuilding = buildings.find((building) => building._id === roadForm.toBuilding);
 
-      const toBuilding =
-        buildings.find(
-          (building) =>
-            building._id ===
-            roadForm.toBuilding
-        );
+    if (!fromBuilding || !toBuilding) {
+      alert("Invalid building selection");
+      return;
+    }
 
-      if (
-        !fromBuilding ||
-        !toBuilding
-      ) {
-        alert(
-          "Invalid building selection"
-        );
-        return;
-      }
+    const fromX = Number(fromBuilding.position?.x ?? fromBuilding.x ?? 0);
+    const fromY = Number(fromBuilding.position?.y ?? fromBuilding.y ?? 0);
+    const toX = Number(toBuilding.position?.x ?? toBuilding.x ?? 0);
+    const toY = Number(toBuilding.position?.y ?? toBuilding.y ?? 0);
 
-      const fromX =
-        Number(
-          fromBuilding.position?.x ??
-            fromBuilding.x ??
-            0
-        );
+    const points =
+      Array.isArray(roadForm.points) && roadForm.points.length >= 2
+        ? roadForm.points
+        : [
+            { x: fromX, y: fromY },
+            { x: toX, y: toY },
+          ];
 
-      const fromY =
-        Number(
-          fromBuilding.position?.y ??
-            fromBuilding.y ??
-            0
-        );
+    try {
+      await dispatch(
+        createRoad({
+          ...roadForm,
+          points,
+          width: Number(roadForm.width) || 20,
+          distance: Number(roadForm.distance) || 0,
+          walkingTime: Number(roadForm.walkingTime) || 0,
+        })
+      ).unwrap();
 
-      const toX =
-        Number(
-          toBuilding.position?.x ??
-            toBuilding.x ??
-            0
-        );
+      setShowRoadModal(false);
 
-      const toY =
-        Number(
-          toBuilding.position?.y ??
-            toBuilding.y ??
-            0
-        );
+      setRoadForm({
+        name: "",
+        type: "road",
+        fromBuilding: "",
+        toBuilding: "",
+        points: [],
+        width: 20,
+        color: "#64748B",
+        distance: 0,
+        walkingTime: 0,
+      });
 
-      const points =
-        Array.isArray(
-          roadForm.points
-        ) &&
-        roadForm.points.length >= 2
-          ? roadForm.points
-          : [
-              {
-                x: fromX,
-                y: fromY,
-              },
-              {
-                x: toX,
-                y: toY,
-              },
-            ];
-
-      try {
-        await dispatch(
-          createRoad({
-            ...roadForm,
-
-            points,
-
-            width:
-              Number(
-                roadForm.width
-              ) || 20,
-
-            distance:
-              Number(
-                roadForm.distance
-              ) || 0,
-
-            walkingTime:
-              Number(
-                roadForm.walkingTime
-              ) || 0,
-          })
-        ).unwrap();
-
-        setShowRoadModal(false);
-
-        setRoadForm({
-          name: "",
-          type: "road",
-          fromBuilding: "",
-          toBuilding: "",
-          points: [],
-          width: 20,
-          color: "#64748B",
-          distance: 0,
-          walkingTime: 0,
-        });
-
-        dispatch(
-          fetchRoads()
-        );
-      } catch (error) {
-        console.error(
-          "Create road error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to create road"
-        );
-      }
-    };
+      dispatch(fetchRoads());
+    } catch (error) {
+      console.error("Create road error:", error);
+      alert(error?.message || "Failed to create road");
+    }
+  };
 
   /* =======================================================
      CREATE CAMPUS ROAD
      FIXES: createCampusRoad undefined
   ======================================================= */
 
-  const createCampusRoad =
-    async (
-      roadData
-    ) => {
-      if (!roadData) {
-        return;
-      }
+  const createCampusRoad = async (roadData) => {
+    if (!roadData) return;
 
-      try {
-        await dispatch(
-          createRoad({
-            ...roadData,
+    try {
+      await dispatch(
+        createRoad({
+          ...roadData,
+          name: roadData.name?.trim() || "Campus Road",
+          type: roadData.type || "road",
+          width: Number(roadData.width) || 20,
+          color: roadData.color || "#64748B",
+          points: Array.isArray(roadData.points) ? roadData.points : [],
+          distance: Number(roadData.distance) || 0,
+          walkingTime: Number(roadData.walkingTime) || 0,
+        })
+      ).unwrap();
 
-            name:
-              roadData.name?.trim() ||
-              "Campus Road",
-
-            type:
-              roadData.type ||
-              "road",
-
-            width:
-              Number(
-                roadData.width
-              ) || 20,
-
-            color:
-              roadData.color ||
-              "#64748B",
-
-            points:
-              Array.isArray(
-                roadData.points
-              )
-                ? roadData.points
-                : [],
-
-            distance:
-              Number(
-                roadData.distance
-              ) || 0,
-
-            walkingTime:
-              Number(
-                roadData.walkingTime
-              ) || 0,
-          })
-        ).unwrap();
-
-        dispatch(
-          fetchRoads()
-        );
-      } catch (error) {
-        console.error(
-          "Create campus road error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to create campus road"
-        );
-      }
-    };
+      dispatch(fetchRoads());
+    } catch (error) {
+      console.error("Create campus road error:", error);
+      alert(error?.message || "Failed to create campus road");
+    }
+  };
 
   /* =======================================================
      ROAD SELECT
   ======================================================= */
 
-  const handleRoadClick =
-    (road) => {
-      if (!road) return;
+  const handleRoadClick = (road) => {
+    if (!road) return;
 
-      setSelectedRoad(road);
+    setSelectedRoad(road);
+    setSelectedBuilding(null);
+    setSelectedElement(null);
+    setSelectedCampusElement(null);
 
-      setSelectedBuilding(null);
-      setSelectedElement(null);
-      setSelectedCampusElement(null);
-
-      setActiveTool("select");
-    };
+    setActiveTool("select");
+  };
 
   /* =======================================================
-     ROAD DRAG
+     ROAD DRAG / RESIZE / PROPERTY — LOCAL ONLY
   ======================================================= */
 
-  const handleRoadDragEnd =
-    async (
-      road,
-      updatedPoints
-    ) => {
-      if (
-        !road?._id ||
-        !Array.isArray(
-          updatedPoints
-        ) ||
-        updatedPoints.length < 2
-      ) {
-        return;
-      }
+  const patchRoadDraft = (id, patch) => {
+    setRoadDrafts((prev) => ({
+      ...prev,
+      [id]: mergePatch(prev[id] || {}, patch),
+    }));
+  };
 
-      const updatedRoad = {
-        ...road,
-        points:
-          updatedPoints,
-      };
+  const handleRoadDragEnd = (road, updatedPoints) => {
+    if (!road?._id || !Array.isArray(updatedPoints) || updatedPoints.length < 2) return;
 
-      setSelectedRoad(
-        updatedRoad
-      );
+    patchRoadDraft(road._id, { points: updatedPoints });
 
-      try {
-        const saved =
-          await dispatch(
-            updateRoad({
-              id: road._id,
+    setSelectedRoad((prev) =>
+      prev?._id === road._id ? { ...prev, points: updatedPoints } : prev
+    );
+  };
 
-              data: {
-                points:
-                  updatedPoints,
-              },
-            })
-          ).unwrap();
+  const handleUpdateRoad = (field, value) => {
+    if (!selectedRoad?._id) return;
 
-        if (saved) {
-          setSelectedRoad(
-            saved
-          );
-        }
+    const numericFields = ["width", "distance", "walkingTime"];
+    const finalValue = numericFields.includes(field) ? Number(value) : value;
 
-        dispatch(
-          fetchRoads()
-        );
-      } catch (error) {
-        console.error(
-          "Road drag error:",
-          error
-        );
+    patchRoadDraft(selectedRoad._id, { [field]: finalValue });
 
-        alert(
-          error?.message ||
-            "Failed to move road"
-        );
-      }
-    };
-
-  /* =======================================================
-     ROAD UPDATE
-  ======================================================= */
-
-  const handleUpdateRoad =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedRoad?._id
-      ) {
-        return;
-      }
-
-      const updatedRoad = {
-        ...selectedRoad,
-        [field]: value,
-      };
-
-      setSelectedRoad(
-        updatedRoad
-      );
-
-      try {
-        const saved =
-          await dispatch(
-            updateRoad({
-              id:
-                selectedRoad._id,
-
-              data: {
-                [field]:
-                  field ===
-                    "width" ||
-                  field ===
-                    "distance" ||
-                  field ===
-                    "walkingTime"
-                    ? Number(value)
-                    : value,
-              },
-            })
-          ).unwrap();
-
-        if (saved) {
-          setSelectedRoad(
-            saved
-          );
-        }
-
-        dispatch(
-          fetchRoads()
-        );
-      } catch (error) {
-        console.error(
-          "Road update error:",
-          error
-        );
-      }
-    };
+    setSelectedRoad((prev) => ({ ...prev, [field]: finalValue }));
+  };
 
   /* =======================================================
      ROAD DELETE
   ======================================================= */
 
-  const handleDeleteRoad =
-    async (
-      id
-    ) => {
-      if (!id) return;
+  const handleDeleteRoad = async (id) => {
+    if (!id) return;
 
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this road?"
-        );
+    const confirmed = window.confirm("Are you sure you want to delete this road?");
+    if (!confirmed) return;
 
-      if (!confirmed) {
-        return;
-      }
+    try {
+      await dispatch(deleteRoad(id)).unwrap();
 
-      try {
-        await dispatch(
-          deleteRoad(id)
-        ).unwrap();
+      setSelectedRoad(null);
+      setRoadDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
 
-        setSelectedRoad(
-          null
-        );
-
-        dispatch(
-          fetchRoads()
-        );
-      } catch (error) {
-        console.error(
-          "Delete road error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to delete road"
-        );
-      }
-    };
+      dispatch(fetchRoads());
+    } catch (error) {
+      console.error("Delete road error:", error);
+      alert(error?.message || "Failed to delete road");
+    }
+  };
 
   /* =======================================================
      FLOOR CREATE
+     (single click action — saved immediately for a real _id)
   ======================================================= */
 
-  const handleCreateFloor =
-    async () => {
-      if (
-        !currentBuilding?._id
-      ) {
-        alert(
-          "Please select a building first"
-        );
-        return;
-      }
+  const handleCreateFloor = async () => {
+    if (!currentBuilding?._id) {
+      alert("Please select a building first");
+      return;
+    }
 
-      if (
-        !floorForm.name.trim()
-      ) {
-        alert(
-          "Please enter floor name"
-        );
-        return;
-      }
+    if (!floorForm.name.trim()) {
+      alert("Please enter floor name");
+      return;
+    }
 
-      try {
-        await dispatch(
-          createFloor({
-            buildingId:
-              currentBuilding._id,
+    try {
+      await dispatch(
+        createFloor({
+          buildingId: currentBuilding._id,
+          name: floorForm.name.trim(),
+          floorNumber: Number(floorForm.floorNumber),
+          width: Number(floorForm.width),
+          height: Number(floorForm.height),
+          heightZ: Number(floorForm.heightZ) || 4,
+          description: floorForm.description,
+        })
+      ).unwrap();
 
-            name:
-              floorForm.name.trim(),
+      setShowFloorModal(false);
 
-            floorNumber:
-              Number(
-                floorForm.floorNumber
-              ),
+      setFloorForm({
+        name: "",
+        floorNumber: 0,
+        width: 1000,
+        height: 700,
+        heightZ: 4,
+        description: "",
+      });
 
-            width:
-              Number(
-                floorForm.width
-              ),
-
-            height:
-              Number(
-                floorForm.height
-              ),
-               heightZ:
-      Number(
-        floorForm.heightZ
-      ) || 4,
-
-
-            description:
-              floorForm.description,
-          })
-        ).unwrap();
-
-        setShowFloorModal(
-          false
-        );
-
-        setFloorForm({
-          name: "",
-          floorNumber: 0,
-          width: 1000,
-          height: 700,
-            heightZ: 4,
-          description: "",
-        });
-
-        dispatch(
-          fetchFloorsByBuilding(
-            currentBuilding._id
-          )
-        );
-      } catch (error) {
-        console.error(
-          "Create floor error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to create floor"
-        );
-      }
-    };
+      dispatch(fetchFloorsByBuilding(currentBuilding._id));
+    } catch (error) {
+      console.error("Create floor error:", error);
+      alert(error?.message || "Failed to create floor");
+    }
+  };
 
   /* =======================================================
      FLOOR DELETE
   ======================================================= */
 
-  const handleDeleteFloor =
-    async (
-      floor
-    ) => {
-      if (!floor?._id) {
-        return;
+  const handleDeleteFloor = async (floor) => {
+    if (!floor?._id) return;
+
+    const confirmed = window.confirm(`Delete ${floor.name}?`);
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteFloor(floor._id)).unwrap();
+
+      dispatch(setCurrentFloor(null));
+      setSelectedElement(null);
+      setFloorElementDrafts({});
+
+      if (currentBuilding?._id) {
+        dispatch(fetchFloorsByBuilding(currentBuilding._id));
       }
-
-      const confirmed =
-        window.confirm(
-          `Delete ${floor.name}?`
-        );
-
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await dispatch(
-          deleteFloor(floor._id)
-        ).unwrap();
-
-        dispatch(
-          setCurrentFloor(null)
-        );
-
-        setSelectedElement(
-          null
-        );
-
-        if (
-          currentBuilding?._id
-        ) {
-          dispatch(
-            fetchFloorsByBuilding(
-              currentBuilding._id
-            )
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Delete floor error:",
-          error
-        );
-      }
-    };
+    } catch (error) {
+      console.error("Delete floor error:", error);
+    }
+  };
 
   /* =======================================================
      FLOOR CANVAS CLICK
   ======================================================= */
 
-  const handleCanvasClick =
-    (event) => {
-      if (
-        activeTool ===
-          "select" ||
-        !activeTool
-      ) {
-        return;
-      }
+  const handleCanvasClick = (event) => {
+    if (activeTool === "select" || !activeTool) return;
+    if (!currentFloor?._id) return;
 
-      if (
-        !currentFloor?._id
-      ) {
-        return;
-      }
+    const rect = floorCanvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
-      const rect =
-        floorCanvasRef.current?.getBoundingClientRect();
+    const x = snapToGrid(event.clientX - rect.left);
+    const y = snapToGrid(event.clientY - rect.top);
 
-      if (!rect) return;
-
-      const x =
-        snapToGrid(
-          event.clientX -
-            rect.left
-        );
-
-      const y =
-        snapToGrid(
-          event.clientY -
-            rect.top
-        );
-
-      const defaultColors = {
-        room: "#86EFAC",
-        classroom: "#7DD3FC",
-        lab: "#FDE68A",
-        office: "#D8B4FE",
-        corridor: "#CBD5E1",
-        door: "#FBBF24",
-        staircase: "#FDBA74",
-        washroom: "#93C5FD",
-        wall: "#94A3B8",
-        lift: "#67E8F9",
-      };
-
-      const data = {
-        floorId:
-          currentFloor._id,
-
-        name:
-          activeTool,
-
-        type:
-          activeTool,
-
-        position: {
-          x,
-          y,
-          z: 0,
-        },
-
-        dimensions: {
-          width: 150,
-          height: 100,
-          depth: 100,
-        },
-
-        color:
-          defaultColors[
-            activeTool
-          ] ||
-          "#CBD5E1",
-
-        strokeColor:
-          "#334155",
-
-        strokeWidth: 2,
-
-        rotation: 0,
-      };
-
-      handleCreateElement(
-        data
-      );
-
-      setActiveTool("select");
+    const defaultColors = {
+      room: "#86EFAC",
+      classroom: "#7DD3FC",
+      lab: "#FDE68A",
+      office: "#D8B4FE",
+      corridor: "#CBD5E1",
+      door: "#FBBF24",
+      staircase: "#FDBA74",
+      washroom: "#93C5FD",
+      wall: "#94A3B8",
+      lift: "#67E8F9",
     };
+
+    const data = {
+      floorId: currentFloor._id,
+      name: activeTool,
+      type: activeTool,
+
+      position: { x, y, z: 0 },
+      dimensions: { width: 150, height: 100, depth: 100 },
+
+      color: defaultColors[activeTool] || "#CBD5E1",
+      strokeColor: "#334155",
+      strokeWidth: 2,
+      rotation: 0,
+    };
+
+    handleCreateElement(data);
+    setActiveTool("select");
+  };
 
   /* =======================================================
      FLOOR ELEMENT CREATE
+     (single click action — saved immediately for a real _id)
   ======================================================= */
 
-  const handleCreateElement =
-    async (
-      data
-    ) => {
-      try {
-        await dispatch(
-          createMapElement(data)
-        ).unwrap();
+  const handleCreateElement = async (data) => {
+    try {
+      await dispatch(createMapElement(data)).unwrap();
 
-        if (
-          currentFloor?._id
-        ) {
-          dispatch(
-            fetchMapElementsByFloor(
-              currentFloor._id
-            )
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Create floor element error:",
-          error
-        );
-
-        alert(
-          error?.message ||
-            "Failed to create element"
-        );
+      if (currentFloor?._id) {
+        dispatch(fetchMapElementsByFloor(currentFloor._id));
       }
-    };
+    } catch (error) {
+      console.error("Create floor element error:", error);
+      alert(error?.message || "Failed to create element");
+    }
+  };
 
   /* =======================================================
      FLOOR ELEMENT SELECT
   ======================================================= */
 
-  const handleElementClick =
-    (element) => {
-      if (!element) return;
+  const handleElementClick = (element) => {
+    if (!element) return;
 
-      setSelectedElement(
-        element
-      );
+    setSelectedElement(element);
+    setSelectedBuilding(null);
+    setSelectedRoad(null);
+    setSelectedCampusElement(null);
 
-      setSelectedBuilding(null);
-      setSelectedRoad(null);
-      setSelectedCampusElement(
-        null
-      );
-
-      setActiveTool("select");
-    };
+    setActiveTool("select");
+  };
 
   /* =======================================================
-     FLOOR ELEMENT DRAG
+     FLOOR ELEMENT — fallback drag (kept for compatibility,
+     now local-only just like handleElementMove/Resize)
   ======================================================= */
 
-  const handleDragEnd =
-    async (
-      element,
-      position
-    ) => {
-      if (!element?._id) {
-        return;
-      }
-
-      const updatedPosition = {
-        ...(element.position ||
-          {}),
-        ...position,
-      };
-
-      try {
-        await dispatch(
-          updateElementPosition({
-            id:
-              element._id,
-
-            position:
-              updatedPosition,
-          })
-        ).unwrap();
-
-        setSelectedElement({
-          ...element,
-          position:
-            updatedPosition,
-        });
-
-        if (
-          currentFloor?._id
-        ) {
-          dispatch(
-            fetchMapElementsByFloor(
-              currentFloor._id
-            )
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Floor element drag error:",
-          error
-        );
-      }
-    };
+  const handleDragEnd = (element, position) => {
+    if (!element?._id) return;
+    handleElementMove(element, position.x, position.y);
+  };
 
   /* =======================================================
-     FLOOR ELEMENT PROPERTY
+     FLOOR ELEMENT PROPERTY — LOCAL ONLY
   ======================================================= */
 
-  const handlePropertyChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedElement?._id
-      ) {
-        return;
-      }
+  const patchFloorElementDraft = (id, patch) => {
+    setFloorElementDrafts((prev) => ({
+      ...prev,
+      [id]: mergePatch(prev[id] || {}, patch),
+    }));
+  };
 
-      const updated = {
-        ...selectedElement,
-        [field]: value,
-      };
+  const handlePropertyChange = (field, value) => {
+    if (!selectedElement?._id) return;
 
-      setSelectedElement(
-        updated
-      );
-
-      try {
-        await dispatch(
-          updateMapElement({
-            id:
-              selectedElement._id,
-
-            data: {
-              [field]: value,
-            },
-          })
-        ).unwrap();
-
-        if (
-          currentFloor?._id
-        ) {
-          dispatch(
-            fetchMapElementsByFloor(
-              currentFloor._id
-            )
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Element property error:",
-          error
-        );
-      }
-    };
+    patchFloorElementDraft(selectedElement._id, { [field]: value });
+    setSelectedElement((prev) => ({ ...prev, [field]: value }));
+  };
 
   /* =======================================================
-     FLOOR ELEMENT POSITION
+     FLOOR ELEMENT POSITION — LOCAL ONLY
   ======================================================= */
 
-  const handlePositionChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedElement?._id
-      ) {
-        return;
-      }
+  const handlePositionChange = (field, value) => {
+    if (!selectedElement?._id) return;
 
-      const position = {
-        ...(selectedElement.position ||
-          {}),
-        [field]:
-          Number(value),
-      };
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return;
 
-      try {
-        await dispatch(
-          updateElementPosition({
-            id:
-              selectedElement._id,
+    patchFloorElementDraft(selectedElement._id, { position: { [field]: numericValue } });
 
-            position,
-          })
-        ).unwrap();
-
-        setSelectedElement({
-          ...selectedElement,
-          position,
-        });
-      } catch (error) {
-        console.error(
-          "Position update error:",
-          error
-        );
-      }
-    };
+    setSelectedElement((prev) => ({
+      ...prev,
+      position: { ...(prev.position || {}), [field]: numericValue },
+    }));
+  };
 
   /* =======================================================
-     FLOOR ELEMENT DIMENSION
+     FLOOR ELEMENT DIMENSION — LOCAL ONLY
   ======================================================= */
 
-  const handleDimensionChange =
-    async (
-      field,
-      value
-    ) => {
-      if (
-        !selectedElement?._id
-      ) {
-        return;
-      }
+  const handleDimensionChange = (field, value) => {
+    if (!selectedElement?._id) return;
 
-      const numeric =
-        Number(value);
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return;
 
-      if (
-        !Number.isFinite(
-          numeric
-        ) ||
-        numeric <= 0
-      ) {
-        return;
-      }
+    patchFloorElementDraft(selectedElement._id, { dimensions: { [field]: numeric } });
 
-      const dimensions = {
-        ...(selectedElement.dimensions ||
-          {}),
-        [field]: numeric,
-      };
-
-      try {
-        await dispatch(
-          updateElementDimensions({
-            id:
-              selectedElement._id,
-
-            dimensions,
-          })
-        ).unwrap();
-
-        setSelectedElement({
-          ...selectedElement,
-          dimensions,
-        });
-      } catch (error) {
-        console.error(
-          "Dimension update error:",
-          error
-        );
-      }
-    };
+    setSelectedElement((prev) => ({
+      ...prev,
+      dimensions: { ...(prev.dimensions || {}), [field]: numeric },
+    }));
+  };
 
   /* =======================================================
-     ROTATE FLOOR ELEMENT
+     ROTATE FLOOR ELEMENT — LOCAL ONLY
   ======================================================= */
 
-  const rotateElement =
-    async (
-      angle = 90
-    ) => {
-      if (
-        !selectedElement?._id
-      ) {
-        return;
-      }
+  const rotateElement = (angle = 90) => {
+    if (!selectedElement?._id) return;
 
-      const rotation =
-        (
-          Number(
-            selectedElement.rotation ||
-              0
-          ) +
-          angle
-        ) %
-        360;
+    const rotation = (Number(selectedElement.rotation || 0) + angle) % 360;
 
-      try {
-        await dispatch(
-          updateMapElement({
-            id:
-              selectedElement._id,
-
-            data: {
-              rotation,
-            },
-          })
-        ).unwrap();
-
-        setSelectedElement({
-          ...selectedElement,
-          rotation,
-        });
-      } catch (error) {
-        console.error(
-          "Rotation error:",
-          error
-        );
-      }
-    };
+    patchFloorElementDraft(selectedElement._id, { rotation });
+    setSelectedElement((prev) => ({ ...prev, rotation }));
+  };
 
   /* =======================================================
-     SAVE FLOOR ELEMENT
+     SAVE FLOOR ELEMENT — now just points the user at
+     "Save Map" instead of writing straight to the DB
   ======================================================= */
 
-  const saveSelectedElement =
-    async () => {
-      if (
-        !selectedElement?._id
-      ) {
-        return;
-      }
-
-      try {
-        await dispatch(
-          updateMapElement({
-            id:
-              selectedElement._id,
-
-            data:
-              selectedElement,
-          })
-        ).unwrap();
-
-        alert(
-          "Element saved successfully"
-        );
-      } catch (error) {
-        console.error(
-          "Save element error:",
-          error
-        );
-      }
-    };
+  const saveSelectedElement = () => {
+    if (!selectedElement?._id) return;
+    handleSaveMap();
+  };
 
   /* =======================================================
      DELETE FLOOR ELEMENT
   ======================================================= */
 
-  const handleDeleteElement =
-    async (
-      id
-    ) => {
-      if (!id) return;
+  const handleDeleteElement = async (id) => {
+    if (!id) return;
 
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this element?"
-        );
+    const confirmed = window.confirm("Are you sure you want to delete this element?");
+    if (!confirmed) return;
 
-      if (!confirmed) {
-        return;
+    try {
+      await dispatch(deleteMapElement(id)).unwrap();
+
+      setSelectedElement(null);
+      setFloorElementDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+      if (currentFloor?._id) {
+        dispatch(fetchMapElementsByFloor(currentFloor._id));
       }
-
-      try {
-        await dispatch(
-          deleteMapElement(id)
-        ).unwrap();
-
-        setSelectedElement(
-          null
-        );
-
-        if (
-          currentFloor?._id
-        ) {
-          dispatch(
-            fetchMapElementsByFloor(
-              currentFloor._id
-            )
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Delete floor element error:",
-          error
-        );
-      }
-    };
+    } catch (error) {
+      console.error("Delete floor element error:", error);
+    }
+  };
 
   /* =======================================================
      ADD AS LOCATION
   ======================================================= */
 
-  const handleAddAsLocation =
-    async () => {
-      const source =
-        selectedElement ||
-        selectedCampusElement;
+  const handleAddAsLocation = async () => {
+    const source = selectedElement || selectedCampusElement;
+    if (!source) return;
 
-      if (!source) {
-        return;
-      }
+    try {
+      setLocationSaving(true);
 
-      try {
-        setLocationSaving(
-          true
-        );
+      const locationData = {
+        name: source.name,
+        category: source.type,
+        floor: currentFloor?._id,
+        building: currentBuilding?._id,
+        description: source.description || "",
+        x: source.position?.x || 0,
+        y: source.position?.y || 0,
+        icon: source.icon || "location",
+      };
 
-        const locationData = {
-          name:
-            source.name,
-
-          category:
-            source.type,
-
-          floor:
-            currentFloor?._id,
-
-          building:
-            currentBuilding?._id,
-
-          description:
-            source.description ||
-            "",
-
-          x:
-            source.position?.x ||
-            0,
-
-          y:
-            source.position?.y ||
-            0,
-
-          icon:
-            source.icon ||
-            "location",
-        };
-
-        console.log(
-          "Location data:",
-          locationData
-        );
-
-        alert(
-          "Location data prepared successfully."
-        );
-      } catch (error) {
-        console.error(
-          "Location save error:",
-          error
-        );
-      } finally {
-        setLocationSaving(
-          false
-        );
-      }
-    };
+      console.log("Location data:", locationData);
+      alert("Location data prepared successfully.");
+    } catch (error) {
+      console.error("Location save error:", error);
+    } finally {
+      setLocationSaving(false);
+    }
+  };
 
   /* =======================================================
      LOADING
   ======================================================= */
 
   const isLoading =
-    buildingLoading ||
-    floorLoading ||
-    elementLoading ||
-    campusElementLoading ||
-    roadLoading;
+    buildingLoading || floorLoading || elementLoading || campusElementLoading || roadLoading;
 
   /* =======================================================
      RENDER
@@ -2713,491 +1400,189 @@ const handleElementResizeEnd = async (
         showGrid={showGrid}
         setMapView={setMapView}
         setShowGrid={setShowGrid}
-        handleBackToCampus={
-          handleBackToCampus
-        }
-        buildingsCount={
-          buildings.length
-        }
-        roadsCount={
-          campusRoads.length
-        }
+        handleBackToCampus={handleBackToCampus}
+        buildingsCount={buildings.length}
+        roadsCount={campusRoads.length}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* =================================================
-            LEFT SIDEBAR
-        ================================================= */}
+        {/* LEFT SIDEBAR */}
 
         <aside className="w-72 shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
-          {editorMode ===
-            "campus" && (
+          {editorMode === "campus" && (
             <CampusSidebar
-              buildings={
-                buildings
-              }
-
-              buildingLoading={
-                buildingLoading
-              }
-
-              selectedBuilding={
-                selectedBuilding
-              }
-
-              activeTool={
-                activeTool
-              }
-
-              setActiveTool={
-                setActiveTool
-              }
-
-              setShowBuildingModal={
-                setShowBuildingModal
-              }
-
-              setShowRoadModal={
-                setShowRoadModal
-              }
-
-              handleBuildingSelect={
-                handleBuildingSelect
-              }
-
-              handleOpenBuilding={
-                handleOpenBuilding
-              }
+              buildings={buildings}
+              buildingLoading={buildingLoading}
+              selectedBuilding={selectedBuilding}
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              setShowBuildingModal={setShowBuildingModal}
+              setShowRoadModal={setShowRoadModal}
+              handleBuildingSelect={handleBuildingSelect}
+              handleOpenBuilding={handleOpenBuilding}
             />
           )}
 
-          {editorMode ===
-            "floor" && (
+          {editorMode === "floor" && (
             <FloorSidebar
-              currentBuilding={
-                currentBuilding ||
-                selectedBuilding
-              }
-
-              floors={
-                floors
-              }
-
-              currentFloor={
-                currentFloor
-              }
-
-              setShowFloorModal={
-                setShowFloorModal
-              }
-
-              handleBackToCampus={
-                handleBackToCampus
-              }
-
-              handleFloorSelect={
-                handleFloorSelect
-              }
-
-              activeTool={
-                activeTool
-              }
-
-              setActiveTool={
-                setActiveTool
-              }
-
-              handleDeleteFloor={
-                handleDeleteFloor
-              }
+              currentBuilding={currentBuilding || selectedBuilding}
+              floors={floors}
+              currentFloor={currentFloor}
+              setShowFloorModal={setShowFloorModal}
+              handleBackToCampus={handleBackToCampus}
+              handleFloorSelect={handleFloorSelect}
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              handleDeleteFloor={handleDeleteFloor}
             />
           )}
         </aside>
 
-        {/* =================================================
-            CENTER
-        ================================================= */}
+        {/* CENTER */}
 
         <main className="relative flex-1 bg-slate-200 overflow-auto p-4">
-          {editorMode ===
-            "campus" && (
+          {/* Floating Save Map control — works for both campus & floor mode */}
+
+          <div className="sticky top-0 z-[2500] mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSaveMap}
+              disabled={!hasUnsavedChanges || savingMap}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-lg transition ${
+                !hasUnsavedChanges
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : savingMap
+                  ? "bg-blue-400 text-white cursor-wait"
+                  : "bg-emerald-600 text-white hover:bg-emerald-700"
+              }`}
+            >
+              {savingMap
+                ? "Saving..."
+                : hasUnsavedChanges
+                ? "Save Map (unsaved changes)"
+                : "Save Map"}
+            </button>
+          </div>
+
+          {editorMode === "campus" && (
             <CampusMap
-              campusCanvasRef={
-                campusCanvasRef
-              }
-
-              campusWidth={
-                DEFAULT_CAMPUS_WIDTH
-              }
-
-              campusHeight={
-                DEFAULT_CAMPUS_HEIGHT
-              }
-
-              showGrid={
-                showGrid
-              }
-
-              mapView={
-                mapView
-              }
-
-              activeTool={
-                activeTool
-              }
-
-              buildings={
-                buildings
-              }
-
-              campusRoads={
-                campusRoads
-              }
-
-              campusElements={
-                campusElements
-              }
-
-              selectedBuilding={
-                selectedBuilding
-              }
-
-              selectedRoad={
-                selectedRoad
-              }
-
-              selectedCampusElement={
-                selectedCampusElement
-              }
-
-              createCampusRoad={
-                createCampusRoad
-              }
-
-              handleCampusCanvasClick={
-                handleCampusCanvasClick
-              }
-
-              handleBuildingDragEnd={
-                handleBuildingDragEnd
-              }
-
-              handleDeleteBuilding={
-                handleDeleteBuilding
-              }
-
-              handleBuildingSelect={
-                handleBuildingSelect
-              }
-
-              handleOpenBuilding={
-                handleOpenBuilding
-              }
-
-              handleCampusElementSelect={
-                handleCampusElementSelect
-              }
-
-              handleCampusElementDragEnd={
-                handleCampusElementDragEnd
-              }
-
-              handleCampusElementResizeEnd={
-                handleCampusElementResizeEnd
-              }
-
-              handleRoadDragEnd={
-                handleRoadDragEnd
-              }
-
-              handleRoadClick={
-                handleRoadClick
-              }
-
-              setSelectedBuilding={
-                setSelectedBuilding
-              }
-
-              setSelectedRoad={
-                setSelectedRoad
-              }
-
-              setSelectedElement={
-                setSelectedElement
-              }
-
-              setSelectedCampusElement={
-                setSelectedCampusElement
-              }
+              campusCanvasRef={campusCanvasRef}
+              campusWidth={DEFAULT_CAMPUS_WIDTH}
+              campusHeight={DEFAULT_CAMPUS_HEIGHT}
+              showGrid={showGrid}
+              mapView={mapView}
+              activeTool={activeTool}
+              buildings={buildings}
+              campusRoads={campusRoads}
+              campusElements={campusElements}
+              selectedBuilding={selectedBuilding}
+              selectedRoad={selectedRoad}
+              selectedCampusElement={selectedCampusElement}
+              createCampusRoad={createCampusRoad}
+              handleCampusCanvasClick={handleCampusCanvasClick}
+              handleBuildingDragEnd={handleBuildingDragEnd}
+              handleDeleteBuilding={handleDeleteBuilding}
+              handleBuildingSelect={handleBuildingSelect}
+              handleOpenBuilding={handleOpenBuilding}
+              handleCampusElementSelect={handleCampusElementSelect}
+              handleCampusElementDragEnd={handleCampusElementDragEnd}
+              handleCampusElementResizeEnd={handleCampusElementResizeEnd}
+              handleRoadDragEnd={handleRoadDragEnd}
+              handleRoadClick={handleRoadClick}
+              setSelectedBuilding={setSelectedBuilding}
+              setSelectedRoad={setSelectedRoad}
+              setSelectedElement={setSelectedElement}
+              setSelectedCampusElement={setSelectedCampusElement}
             />
           )}
 
-          {editorMode ===
-            "floor" && (
+          {editorMode === "floor" && (
             <FloorMap
-              currentFloor={
-                currentFloor
-              }
-
-              currentBuilding={
-                currentBuilding
-              }
-
-              elements={
-                renderedElements
-              }
-
-              floorCanvasRef={
-                floorCanvasRef
-              }
-
-              floorWidth={
-                floorWidth
-              }
-
-              floorHeight={
-                floorHeight
-              }
-
-              showGrid={
-                showGrid
-              }
-
-              mapView={
-                mapView
-              }
-
-              activeTool={
-                activeTool
-              }
-
-              selectedElement={
-                selectedElement
-              }
-
-              handleCanvasClick={
-                handleCanvasClick
-              }
-
-              handleDragEnd={
-                handleDragEnd
-              }
-
-              handleElementClick={
-                handleElementClick
-              }
-
-              setSelectedElement={
-                setSelectedElement
-              }
-             //  handleCanvasClick={handleCanvasClick}
-  //handleDragEnd={handleDragEnd}
-  //handleElementClick={handleElementClick}
-
-  handleElementMove={
-  handleElementMove
-}
-
-handleElementMoveEnd={
-  handleElementMoveEnd
-}
-
-handleElementResize={
-  handleElementResize
-}
-
-handleElementResizeEnd={
-  handleElementResizeEnd
-}
+              currentFloor={currentFloor}
+              currentBuilding={currentBuilding}
+              elements={renderedElements}
+              floorCanvasRef={floorCanvasRef}
+              floorWidth={floorWidth}
+              floorHeight={floorHeight}
+              showGrid={showGrid}
+              mapView={mapView}
+              activeTool={activeTool}
+              selectedElement={selectedElement}
+              handleCanvasClick={handleCanvasClick}
+              handleDragEnd={handleDragEnd}
+              handleElementClick={handleElementClick}
+              setSelectedElement={setSelectedElement}
+              handleElementMove={handleElementMove}
+              handleElementMoveEnd={handleElementMoveEnd}
+              handleElementResize={handleElementResize}
+              handleElementResizeEnd={handleElementResizeEnd}
             />
           )}
         </main>
 
-        {/* =================================================
-            PROPERTIES
-        ================================================= */}
+        {/* PROPERTIES */}
 
         <PropertiesPanel
-          editorMode={
-            editorMode
-          }
-
-          selectedBuilding={
-            selectedBuilding
-          }
-
-          selectedRoad={
-            selectedRoad
-          }
-
-          selectedElement={
-            selectedElement
-          }
-
-          selectedCampusElement={
-            selectedCampusElement
-          }
-
-          handleBuildingSelect={
-            handleBuildingSelect
-          }
-
-          updateRoad={
-            handleUpdateRoad
-          }
-
-          deleteRoad={
-            handleDeleteRoad
-          }
-
-          handlePropertyChange={
-            handlePropertyChange
-          }
-
-          handlePositionChange={
-            handlePositionChange
-          }
-
-          handleDimensionChange={
-            handleDimensionChange
-          }
-
-          rotateElement={
-            rotateElement
-          }
-
-          saveSelectedElement={
-            saveSelectedElement
-          }
-
-          handleAddAsLocation={
-            handleAddAsLocation
-          }
-
-          handleDeleteElement={
-            handleDeleteElement
-          }
-
-          locationSaving={
-            locationSaving
-          }
-
-          handleDeleteBuilding={
-            handleDeleteBuilding
-          }
-
-          handleBuildingPropertyChange={
-            handleBuildingPropertyChange
-          }
-
-          handleBuildingPositionChange={
-            handleBuildingPositionChange
-          }
-
-          handleBuildingDimensionChange={
-            handleBuildingDimensionChange
-          }
-
-          handleCampusElementPropertyChange={
-            handleCampusElementPropertyChange
-          }
-
-          handleCampusElementPositionChange={
-            handleCampusElementPositionChange
-          }
-
-          handleCampusElementDimensionChange={
-            handleCampusElementDimensionChange
-          }
-
-          handleDeleteCampusElement={
-            handleDeleteCampusElement
-          }
+          editorMode={editorMode}
+          selectedBuilding={selectedBuilding}
+          selectedRoad={selectedRoad}
+          selectedElement={selectedElement}
+          selectedCampusElement={selectedCampusElement}
+          handleBuildingSelect={handleBuildingSelect}
+          updateRoad={handleUpdateRoad}
+          deleteRoad={handleDeleteRoad}
+          handlePropertyChange={handlePropertyChange}
+          handlePositionChange={handlePositionChange}
+          handleDimensionChange={handleDimensionChange}
+          rotateElement={rotateElement}
+          saveSelectedElement={saveSelectedElement}
+          handleAddAsLocation={handleAddAsLocation}
+          handleDeleteElement={handleDeleteElement}
+          locationSaving={locationSaving}
+          handleDeleteBuilding={handleDeleteBuilding}
+          handleBuildingPropertyChange={handleBuildingPropertyChange}
+          handleBuildingPositionChange={handleBuildingPositionChange}
+          handleBuildingDimensionChange={handleBuildingDimensionChange}
+          handleCampusElementPropertyChange={handleCampusElementPropertyChange}
+          handleCampusElementPositionChange={handleCampusElementPositionChange}
+          handleCampusElementDimensionChange={handleCampusElementDimensionChange}
+          handleDeleteCampusElement={handleDeleteCampusElement}
         />
       </div>
 
-      {/* =====================================================
-          MODALS
-      ===================================================== */}
+      {/* MODALS */}
 
       <BuildingModal
-        show={
-          showBuildingModal
-        }
-
-        buildingForm={
-          buildingForm
-        }
-
-        setBuildingForm={
-          setBuildingForm
-        }
-
-        handleCreateBuilding={
-          handleCreateBuilding
-        }
-
-        setShowBuildingModal={
-          setShowBuildingModal
-        }
+        show={showBuildingModal}
+        buildingForm={buildingForm}
+        setBuildingForm={setBuildingForm}
+        handleCreateBuilding={handleCreateBuilding}
+        setShowBuildingModal={setShowBuildingModal}
       />
 
       <FloorModal
-        show={
-          showFloorModal
-        }
-
-        floorForm={
-          floorForm
-        }
-
-        setFloorForm={
-          setFloorForm
-        }
-
-        handleCreateFloor={
-          handleCreateFloor
-        }
-
-        setShowFloorModal={
-          setShowFloorModal
-        }
+        show={showFloorModal}
+        floorForm={floorForm}
+        setFloorForm={setFloorForm}
+        handleCreateFloor={handleCreateFloor}
+        setShowFloorModal={setShowFloorModal}
       />
 
       <RoadModal
-        show={
-          showRoadModal
-        }
-
-        buildings={
-          buildings
-        }
-
-        roadForm={
-          roadForm
-        }
-
-        setRoadForm={
-          setRoadForm
-        }
-
-        handleCreateRoad={
-          handleCreateRoad
-        }
-
-        setShowRoadModal={
-          setShowRoadModal
-        }
+        show={showRoadModal}
+        buildings={buildings}
+        roadForm={roadForm}
+        setRoadForm={setRoadForm}
+        handleCreateRoad={handleCreateRoad}
+        setShowRoadModal={setShowRoadModal}
       />
 
       <LoadingOverlay
-        show={
-          isLoading
-        }
-
+        show={isLoading || savingMap}
         message={
-          editorMode ===
-          "campus"
+          savingMap
+            ? "Saving map to database..."
+            : editorMode === "campus"
             ? "Loading campus..."
             : "Loading floor map..."
         }

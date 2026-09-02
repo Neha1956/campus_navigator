@@ -8,20 +8,35 @@ import {
   X,
 } from "lucide-react";
 
-import { fetchBuildings, setCurrentBuilding } from "../redux/slices/buildingSlice";
-import { fetchRoads } from "../redux/slices/roadSlice";
-import { fetchCampusElements } from "../redux/slices/campusElementSlice";
-import { fetchLocations } from "../redux/slices/locationSlice";
 import {
+  fetchBuildings,
+  setCurrentBuilding,
+} from "../redux/slices/buildingSlice";
+
+import { fetchRoads } from "../redux/slices/roadSlice";
+
+import {
+  fetchCampusElements,
+} from "../redux/slices/campusElementSlice";
+
+import {
+  fetchLocations,
   setSelectedLocation,
 } from "../redux/slices/locationSlice";
-import { fetchRoutes } from "../redux/slices/routeSlice";
+
+import {
+  fetchRoutes,
+} from "../redux/slices/routeSlice";
+
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
 
 const MapPage = () => {
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  /* =========================================================
+     REDUX
+  ========================================================= */
 
   const {
     locations,
@@ -29,18 +44,41 @@ const MapPage = () => {
     error,
     selectedLocation,
   } = useSelector((state) => state.locations);
-  const { buildings = [] } = useSelector((state) => state.buildings || {});
-  const { roads = [] } = useSelector((state) => state.roads || {});
-  const { elements: campusElements = [] } = useSelector((state) => state.campusElements || {});
-const {
-  routes,
-  loading: routesLoading,
-  error: routesError,
-} = useSelector((state) => state.routes);
-console.log("ROUTES:", routes);
+
+  const {
+    buildings = [],
+  } = useSelector((state) => state.buildings || {});
+
+  const {
+    roads = [],
+  } = useSelector((state) => state.roads || {});
+
+  const {
+    elements: campusElements = [],
+  } = useSelector(
+    (state) => state.campusElements || {}
+  );
+
+  const {
+    routes,
+    loading: routesLoading,
+    error: routesError,
+  } = useSelector((state) => state.routes);
+
+  console.log("ROUTES:", routes);
+
+  /* =========================================================
+     STATE
+  ========================================================= */
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+
   const mapCanvasRef = useRef(null);
+
+  /* =========================================================
+     FETCH LOCATIONS
+  ========================================================= */
 
   useEffect(() => {
     if (!locations.length) {
@@ -48,34 +86,63 @@ console.log("ROUTES:", routes);
     }
   }, [dispatch, locations.length]);
 
+  /* =========================================================
+     FETCH BUILDINGS / ROADS / CAMPUS ELEMENTS
+  ========================================================= */
+
   useEffect(() => {
-    if (!buildings.length) dispatch(fetchBuildings());
-    if (!roads.length) dispatch(fetchRoads());
-    if (!campusElements.length) dispatch(fetchCampusElements());
-  }, [dispatch, buildings.length, roads.length, campusElements.length]);
+    if (!buildings.length) {
+      dispatch(fetchBuildings());
+    }
+
+    if (!roads.length) {
+      dispatch(fetchRoads());
+    }
+
+    if (!campusElements.length) {
+      dispatch(fetchCampusElements());
+    }
+  }, [
+    dispatch,
+    buildings.length,
+    roads.length,
+    campusElements.length,
+  ]);
+
+  /* =========================================================
+     FETCH ROUTES
+  ========================================================= */
+
+  useEffect(() => {
+    if (!routes.length) {
+      dispatch(fetchRoutes());
+    }
+  }, [dispatch, routes.length]);
+
+  /* =========================================================
+     CATEGORIES
+  ========================================================= */
 
   const categories = useMemo(() => {
-
     const uniqueCategories = [
       ...new Set(
-        locations.map((location) => location.category)
+        locations
+          .map((location) => location.category)
+          .filter(Boolean)
       ),
     ];
 
     return ["All", ...uniqueCategories];
-
   }, [locations]);
-  useEffect(() => {
-  if (!routes.length) {
-    dispatch(fetchRoutes());
-  }
-}, [dispatch, routes.length]);
+
+  /* =========================================================
+     FILTER LOCATIONS
+  ========================================================= */
 
   const filteredLocations = useMemo(() => {
-
     return locations.filter((location) => {
-
       const matchesSearch =
+        !search ||
         location.name
           ?.toLowerCase()
           .includes(search.toLowerCase()) ||
@@ -89,8 +156,11 @@ console.log("ROUTES:", routes);
 
       return matchesSearch && matchesCategory;
     });
-
   }, [locations, search, category]);
+
+  /* =========================================================
+     LOCATION CLICK
+  ========================================================= */
 
   const handleLocationClick = (location) => {
     dispatch(setSelectedLocation(location));
@@ -112,234 +182,348 @@ console.log("ROUTES:", routes);
     }
   };
 
+  /* =========================================================
+     OPEN BUILDING
+  ========================================================= */
+
   const handleOpenBuilding = (building) => {
     dispatch(setCurrentBuilding(building));
     navigate("/campus-3d");
   };
 
+  /* =========================================================
+     CLEAR SELECTION
+  ========================================================= */
+
   const clearSelection = () => {
     dispatch(setSelectedLocation(null));
   };
 
+  /* =========================================================
+     LOADING
+  ========================================================= */
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+
+          <p className="text-sm font-medium text-slate-600">
+            Loading campus map...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     ERROR
+  ========================================================= */
+
+  if (error) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-slate-50 p-6">
+        <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+            !
+          </div>
+
+          <h2 className="text-lg font-semibold text-slate-900">
+            Unable to load campus map
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            {error}
+          </p>
+
+          <button
+            onClick={() => dispatch(fetchLocations())}
+            className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     MAIN PAGE
+  ========================================================= */
+
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50">
+    <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden bg-slate-50">
 
-      {/* Page Header */}
-      <div className="border-b border-slate-200 bg-white">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-        <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+      <div className="shrink-0 border-b border-slate-200 bg-white">
+        <div className="px-4 py-4 sm:px-6 lg:px-8">
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          {/* TOP ROW */}
+
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+
+            {/* TITLE */}
 
             <div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <Navigation size={20} />
+                </div>
 
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                Navigation
-              </p>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">
+                    Campus Map
+                  </h1>
 
-              <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
-                Campus Map
-              </h1>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Explore buildings and important locations.
-              </p>
-
-            </div>
-
-            {/* Search */}
-            <div className="relative w-full lg:max-w-md">
-
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search campus location..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              />
-
-            </div>
-
-          </div>
-
-          {/* Categories */}
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-
-            <SlidersHorizontal
-              size={18}
-              className="mt-2 shrink-0 text-slate-400"
-            />
-
-            {categories.map((item) => (
-
-              <button
-                key={item}
-                onClick={() => setCategory(item)}
-                className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                  category === item
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {item}
-              </button>
-
-            ))}
-
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* Map Area */}
-      <div className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
-
-        <div className="relative h-[calc(100vh-230px)] min-h-[550px]">
-
-          {loading ? (
-
-            <div className="flex h-full items-center justify-center rounded-2xl border border-slate-200 bg-white">
-              <div className="text-center">
-
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-
-                <p className="mt-3 text-sm text-slate-500">
-                  Loading campus map...
-                </p>
-
+                  <p className="text-sm text-slate-500">
+                    Explore buildings, roads and campus locations
+                  </p>
+                </div>
               </div>
             </div>
 
-          ) : error ? (
+            {/* SEARCH + FILTER */}
 
-            <div className="flex h-full items-center justify-center rounded-2xl border border-red-100 bg-red-50">
-              <p className="text-sm text-red-600">
-                {error}
-              </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+
+              {/* SEARCH */}
+
+              <div className="relative w-full sm:w-72">
+                <Search
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search location..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {/* CATEGORY */}
+
+              <div className="relative">
+                <SlidersHorizontal
+                  size={17}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <select
+                  value={category}
+                  onChange={(event) =>
+                    setCategory(event.target.value)
+                  }
+                  className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-9 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:w-48"
+                >
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
             </div>
+          </div>
 
-          ) : (
+          {/* RESULT COUNT */}
 
-           <CampusMap
-              campusCanvasRef={mapCanvasRef}
-              campusWidth={1400}
-              campusHeight={900}
-              showGrid={true}
-              mapView="2d"
-              activeTool="select"
-              buildings={buildings}
-              campusRoads={roads}
-              campusElements={campusElements}
-              locations={filteredLocations}
-              selectedLocation={selectedLocation}
-              onLocationClick={handleLocationClick}
-              handleOpenBuilding={handleOpenBuilding}
-              readOnly={true}
-              fitToContainer={true}
-            />
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-slate-500">
+              Showing{" "}
+              <span className="font-semibold text-slate-700">
+                {filteredLocations.length}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-slate-700">
+                {locations.length}
+              </span>{" "}
+              locations
+            </p>
 
-          )}
+            {(search || category !== "All") && (
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setCategory("All");
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                <X size={14} />
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
-          {/* Location Details Panel */}
+      {/* =====================================================
+          FULL SCREEN MAP AREA
+      ===================================================== */}
+
+      <div className="min-h-0 flex-1 w-full p-3 sm:p-4 lg:p-5">
+
+        <div className="relative h-full min-h-0 w-full">
+
+          <CampusMap
+            campusCanvasRef={mapCanvasRef}
+
+            /* Keep your existing campus dimensions */
+            campusWidth={1400}
+            campusHeight={900}
+
+            showGrid={true}
+            mapView="2d"
+            activeTool="select"
+
+            buildings={buildings}
+            campusRoads={roads}
+            campusElements={campusElements}
+
+            locations={filteredLocations}
+            selectedLocation={selectedLocation}
+
+            onLocationClick={handleLocationClick}
+
+            handleOpenBuilding={handleOpenBuilding}
+
+            /* User side = read only */
+            readOnly={true}
+
+            /*
+              IMPORTANT:
+              true means map viewport takes
+              complete available page area.
+            */
+            fitToContainer={true}
+          />
+
+          {/* =================================================
+              LOCATION DETAILS PANEL
+          ================================================= */}
+
           {selectedLocation && (
+            <div className="absolute right-4 top-4 z-[3000] w-[320px] max-w-[calc(100%-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
 
-            <div className="absolute bottom-4 right-4 z-30 w-[calc(100%-32px)] max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:bottom-6 sm:right-6">
+              {/* HEADER */}
 
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-slate-100 p-5">
+              <div className="flex items-start justify-between border-b border-slate-100 p-4">
 
-                <div>
+                <div className="min-w-0 pr-3">
+                  <div className="mb-1 inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
+                    {selectedLocation.category || "Location"}
+                  </div>
 
-                  <span className="rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase text-blue-600">
-                    {selectedLocation.category}
-                  </span>
-
-                  <h2 className="mt-2 text-lg font-bold text-slate-900">
+                  <h2 className="truncate text-lg font-bold text-slate-900">
                     {selectedLocation.name}
                   </h2>
-
                 </div>
 
                 <button
                   onClick={clearSelection}
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                 >
                   <X size={18} />
                 </button>
-
               </div>
 
-              {/* Content */}
-              <div className="p-5">
+              {/* BODY */}
 
-                <p className="text-sm leading-6 text-slate-500">
-                  {selectedLocation.description}
-                </p>
+              <div className="space-y-4 p-4">
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                {/* DESCRIPTION */}
+
+                {selectedLocation.description && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Description
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      {selectedLocation.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* POSITION */}
+
+                <div className="grid grid-cols-2 gap-3">
 
                   <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[10px] font-semibold uppercase text-slate-400">
-                      Position
+                    <p className="text-xs text-slate-400">
+                      X Position
                     </p>
 
-                    <p className="mt-1 text-xs font-semibold text-slate-700">
-                      X: {selectedLocation.x}
-                    </p>
-
-                    <p className="text-xs font-semibold text-slate-700">
-                      Y: {selectedLocation.y}
+                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                      {selectedLocation.x ?? "-"}
                     </p>
                   </div>
 
                   <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[10px] font-semibold uppercase text-slate-400">
-                      Status
+                    <p className="text-xs text-slate-400">
+                      Y Position
                     </p>
 
-                    <p className="mt-1 text-xs font-semibold text-green-600">
-                      Active
+                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                      {selectedLocation.y ?? "-"}
                     </p>
                   </div>
 
                 </div>
 
-                {/* Actions */}
-                <div className="mt-4 flex gap-2">
+                {/* STATUS */}
+
+                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3">
+                  <span className="text-sm text-slate-500">
+                    Status
+                  </span>
+
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      selectedLocation.isActive
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {selectedLocation.isActive
+                      ? "Active"
+                      : "Inactive"}
+                  </span>
+                </div>
+
+                {/* ACTIONS */}
+
+                <div className="grid grid-cols-2 gap-3">
 
                   <a
                     href={`/locations/${selectedLocation._id}`}
-                    className="flex flex-1 items-center justify-center rounded-xl bg-slate-100 px-4 py-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                    className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-200"
                   >
                     View Details
                   </a>
 
                   <a
                     href={`/directions?to=${selectedLocation._id}`}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-semibold text-white transition hover:bg-blue-700"
+                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white transition hover:bg-blue-700"
                   >
-                    <Navigation size={15} />
                     Direction
                   </a>
 
                 </div>
-
               </div>
-
             </div>
-
           )}
-
         </div>
-
       </div>
-
     </div>
   );
 };

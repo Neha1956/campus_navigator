@@ -3,7 +3,7 @@ import {
   X,
   MapPinned,
   Navigation,
-  Search,
+  Settings,
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
@@ -25,14 +25,23 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
         {/* Logo + Mobile Menu */}
         <div className="flex items-center gap-2">
 
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="rounded-lg p-2 text-slate-700 hover:bg-slate-100 lg:hidden"
           >
-            {sidebarOpen ? <X size={23} /> : <Menu size={23} />}
+            {sidebarOpen ? (
+              <X size={23} />
+            ) : (
+              <Menu size={23} />
+            )}
           </button>
 
-          <NavLink to="/" className="flex items-center gap-3">
+          {/* Logo */}
+          <NavLink
+            to="/"
+            className="flex items-center gap-3"
+          >
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
               <MapPinned size={21} />
@@ -51,6 +60,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
           </NavLink>
 
         </div>
+
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 lg:flex">
@@ -89,11 +99,21 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
 
         </nav>
 
-        {/* Search */}
-        <button className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500 sm:flex">
-          <Search size={16} />
-          <span>Search campus</span>
-        </button>
+
+        {/* Admin Panel - Desktop */}
+        <NavLink
+          to="/admin"
+          className={({ isActive }) =>
+            `hidden lg:flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition ${
+              isActive
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-slate-50 text-slate-700 border border-slate-200 hover:bg-blue-50 hover:text-blue-600"
+            }`
+          }
+        >
+          <Settings size={17} />
+          <span>Admin Panel</span>
+        </NavLink>
 
       </div>
 
