@@ -16,6 +16,8 @@ import {
   Plus,
   Minus,
   RotateCcw,
+  Waves,
+  DoorClosed,
 } from "lucide-react";
 
 import BuildingRenderer from "./BuildingRenderer";
@@ -30,6 +32,8 @@ const CAMPUS_ELEMENT_TYPES = [
   "park",
   "ground",
   "small-room",
+  "pond",
+  "gate",
 ];
 
 /* =========================================================
@@ -66,6 +70,11 @@ const getCampusElementIcon = (type) => {
 
     case "small-room":
       return DoorOpen;
+      case "pond":
+      return Waves;
+
+    case "gate":
+      return DoorClosed;
 
     default:
       return MapPin;

@@ -16,6 +16,8 @@ const campusElementSchema = new mongoose.Schema(
         "ground",
         "park",
         "small-room",
+        "pond",
+      "gate"
       ],
       default: "parking",
     },

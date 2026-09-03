@@ -87,7 +87,7 @@ const GRID_SIZE = 20;
    CAMPUS ELEMENT TYPES
 ========================================================= */
 
-const CAMPUS_ELEMENT_TYPES = ["parking", "park", "ground", "small-room"];
+const CAMPUS_ELEMENT_TYPES = ["parking", "park", "ground", "small-room","gate","pond"];
 
 /* =========================================================
    LOCAL-DRAFT HELPERS
@@ -789,6 +789,8 @@ const AdminCampusBuilder = () => {
       park: "#BBF7D0",
       ground: "#FDE68A",
       "small-room": "#C4B5FD",
+      pond: "#BAE6FD",
+      gate: "#E2E8F0",
     };
 
     const dimensions = {
@@ -796,6 +798,8 @@ const AdminCampusBuilder = () => {
       park: { width: 220, height: 160 },
       ground: { width: 280, height: 180 },
       "small-room": { width: 150, height: 100 },
+      pond: { width: 200, height: 150 },
+      gate: { width: 100, height: 200 },
     };
 
     const size = dimensions[activeTool] || dimensions["small-room"];

@@ -100,6 +100,8 @@ export const createCampusElement = async (
       "ground",
       "park",
       "small-room",
+      "pond",
+      "gate"
     ];
 
     if (!allowedTypes.includes(type)) {
