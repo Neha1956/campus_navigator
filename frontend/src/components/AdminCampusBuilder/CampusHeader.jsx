@@ -43,7 +43,7 @@ const CampusHeader = ({
         {editorMode === "floor" && (
           <button
             onClick={handleBackToCampus}
-            className="px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 flex items-center gap-2"
+            className="px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 flex items-center gap-2 transition"
           >
             <ChevronLeft size={16} />
             Campus
@@ -52,9 +52,9 @@ const CampusHeader = ({
 
         <button
           onClick={() => setMapView("2d")}
-          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
             mapView === "2d"
-              ? "bg-blue-600"
+              ? "bg-blue-600 shadow"
               : "bg-white/10 hover:bg-white/20"
           }`}
         >
@@ -64,9 +64,9 @@ const CampusHeader = ({
 
         <button
           onClick={() => setMapView("3d")}
-          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition ${
             mapView === "3d"
-              ? "bg-blue-600"
+              ? "bg-blue-600 shadow"
               : "bg-white/10 hover:bg-white/20"
           }`}
         >
@@ -74,16 +74,17 @@ const CampusHeader = ({
           3D
         </button>
 
-        <button
+        {/*<button
           onClick={() => setShowGrid(!showGrid)}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg"
+          className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition"
+          title="Toggle Grid"
         >
           {showGrid ? (
             <Eye size={17} />
           ) : (
             <EyeOff size={17} />
           )}
-        </button>
+        </button>*/}
 
         <button
           onClick={() => {
@@ -91,7 +92,7 @@ const CampusHeader = ({
               "Buildings and floor elements are saved through the database. Campus roads are currently saved locally."
             );
           }}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm flex items-center gap-2"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm flex items-center gap-2 transition font-semibold"
         >
           <Save size={16} />
           Save Map
