@@ -15,19 +15,6 @@ import {
   clearSelectedLocation,
 } from "../../redux/slices/locationSlice";
 
-const campusBlocks = [
-  { name: "Girls Hostel", x: 30, y: 26, width: 28, height: 22 },
-  { name: "R C T Building", x: 38, y: 4, width: 25, height: 18 },
-  { name: "Account Dept", x: 70, y: 12, width: 22, height: 18 },
-  { name: "Boys Hostel", x: 73, y: 52, width: 20, height: 18 },
-  { name: "Temple", x: 55, y: 70, width: 20, height: 16 },
-  { name: "Main Gate", x: 8, y: 82, width: 20, height: 12 },
-  { name: "Store", x: 30, y: 82, width: 14, height: 12 },
-  { name: "Mini Ground", x: 10, y: 58, width: 18, height: 16 },
-  { name: "Big Ground", x: 28, y: 36, width: 42, height: 30 },
-  { name: "Parking", x: 74, y: 34, width: 17, height: 12 },
-];
-
 const AddLocationMap = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -43,16 +30,28 @@ const AddLocationMap = () => {
   const [form, setForm] = useState({
     name: "",
     category: "Building",
-    building: "RCIT Building",
+    building: "", // Default empty rakha hai taaki bina select kiye blank rahe
     buildingId: "",
     floor: 0,
     floorId: "",
     description: "",
     icon: "Building2",
   });
+
+  const [customCategory, setCustomCategory] = useState("");
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+
   const [coords, setCoords] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const availableCategories = React.useMemo(() => {
+    const defaults = ["Building", "Library", "Canteen", "Gate", "Classroom", "Lab", "Office", "Parking", "Park", "Ground", "Pond", "Temple", "Hostel"];
+    const dynamicTypes = campusElements.map((el) => el.type).filter(Boolean);
+    const combined = [...new Set([...defaults, ...dynamicTypes])];
+    return combined.map(cat => cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase());
+  }, [campusElements]);
 
   useEffect(() => {
     dispatch(fetchBuildings());
@@ -72,22 +71,31 @@ const AddLocationMap = () => {
 
   useEffect(() => {
     if (isEditMode && selectedLocation) {
+      const cat = selectedLocation.category || "Building";
+      const isStandard = availableCategories.includes(cat);
+      
       setForm({
         name: selectedLocation.name || "",
-        category: selectedLocation.category || "Building",
-        building: selectedLocation.building || "RCIT Building",
+        category: isStandard ? cat : "Custom",
+        building: selectedLocation.building || "",
         buildingId: selectedLocation.buildingId || "",
         floor: selectedLocation.floor ?? 0,
         floorId: selectedLocation.floorId || "",
         description: selectedLocation.description || "",
         icon: selectedLocation.icon || "Building2",
       });
+
+      if (!isStandard) {
+        setIsCustomCategory(true);
+        setCustomCategory(cat);
+      }
+
       setCoords({
         x: selectedLocation.x ?? 50,
         y: selectedLocation.y ?? 50,
       });
     }
-  }, [isEditMode, selectedLocation]);
+  }, [isEditMode, selectedLocation, availableCategories]);
 
   useEffect(() => {
     if (form.buildingId) {
@@ -114,7 +122,6 @@ const AddLocationMap = () => {
 
     setSelectedFiles((prevFiles) => {
       const merged = [...prevFiles, ...incomingFiles];
-
       const uniqueFiles = merged.filter(
         (file, index, currentFiles) =>
           currentFiles.findIndex(
@@ -124,7 +131,6 @@ const AddLocationMap = () => {
               candidate.lastModified === file.lastModified
           ) === index
       );
-
       return uniqueFiles;
     });
 
@@ -138,10 +144,14 @@ const AddLocationMap = () => {
       return;
     }
 
+    setSubmitting(true);
+
+    const finalCategory = isCustomCategory ? customCategory.trim() : form.category;
+
     const formData = new FormData();
     formData.append("name", form.name);
-    formData.append("category", form.category);
-    formData.append("building", form.building);
+    formData.append("category", finalCategory || "Building");
+    if (form.building) formData.append("building", form.building);
     if (form.buildingId) formData.append("buildingId", form.buildingId);
     formData.append("floor", String(form.floor));
     if (form.floorId) formData.append("floorId", form.floorId);
@@ -157,136 +167,63 @@ const AddLocationMap = () => {
       });
     }
 
-    const result = isEditMode
-      ? await dispatch(editLocation({ id, data: formData }))
-      : await dispatch(addLocation(formData));
+    try {
+      const result = isEditMode
+        ? await dispatch(editLocation({ id, data: formData }))
+        : await dispatch(addLocation(formData));
 
-    if (!result.error) {
-      setForm({
-        name: "",
-        category: "Building",
-        building: "RCIT Building",
-        buildingId: "",
-        floor: 0,
-        floorId: "",
-        description: "",
-        icon: "Building2",
-      });
-      setCoords(null);
-      setSelectedFiles([]);
-      setPreviewUrls([]);
+      if (!result.error) {
+        setForm({
+          name: "",
+          category: "Building",
+          building: "",
+          buildingId: "",
+          floor: 0,
+          floorId: "",
+          description: "",
+          icon: "Building2",
+        });
+        setCoords(null);
+        setSelectedFiles([]);
+        setPreviewUrls([]);
 
-      alert(isEditMode ? "Location updated successfully!" : "Location added successfully!");
-      navigate(isEditMode ? "/admin/manage-locations" : "/locations");
-    } else {
-      alert(result.payload || "Failed to save location");
+        alert(isEditMode ? "Location updated successfully!" : "Location added successfully!");
+        navigate(isEditMode ? "/admin/manage-locations" : "/locations");
+      } else {
+        alert(result.payload || "Failed to save location");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while saving.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-    <div className="w-full min-w-0">
+      <div className="w-full min-w-0">
         <h3 className="mb-2 text-md font-semibold text-slate-700">1. Select map position</h3>
         <div className="w-full min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div className="h-[650px] w-full min-w-0">
-          <CampusMap
-            campusCanvasRef={mapCanvasRef}
-            campusWidth={1400}
-            campusHeight={900}
-            showGrid={true}
-            mapView="2d"
-            activeTool="select"
-            buildings={buildings}
-            campusRoads={roads}
-            campusElements={campusElements}
-            locations={coords ? [{ _id: "draft-location", ...coords, name: "Selected location" }] : []}
-            selectedLocation={coords ? { _id: "draft-location" } : null}
-            onMapPointSelected={handleMapPointSelected}
-             fitToContainer={true}
-          />
+          <div className="h-[650px] w-full min-w-0">
+            <CampusMap
+              campusCanvasRef={mapCanvasRef}
+              campusWidth={1400}
+              campusHeight={900}
+              showGrid={true}
+              mapView="2d"
+              activeTool="select"
+              buildings={buildings}
+              campusRoads={roads}
+              campusElements={campusElements}
+              locations={coords ? [{ _id: "draft-location", ...coords, name: "Selected location" }] : []}
+              selectedLocation={coords ? { _id: "draft-location" } : null}
+              onMapPointSelected={handleMapPointSelected}
+              fitToContainer={true}
+            />
           </div>
-          <svg
-            viewBox="0 0 100 100"
-            className="hidden"
-            role="img"
-            aria-label="Campus map selector"
-          >
+          <svg viewBox="0 0 100 100" className="hidden" role="img" aria-label="Campus map selector">
             <rect x="0" y="0" width="100" height="100" fill="#dff4d8" />
-            <rect x="4" y="4" width="92" height="92" rx="2.5" fill="#dff4d8" stroke="#6b7280" strokeWidth="0.8" />
-
-            <rect x="8" y="18" width="18" height="16" fill="#d2b48c" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="10" y="20" width="14" height="12" fill="#f6d7b0" stroke="#4b5563" strokeWidth="0.3" />
-            <rect x="8" y="58" width="18" height="16" fill="#d2b48c" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="10" y="60" width="14" height="12" fill="#f6d7b0" stroke="#4b5563" strokeWidth="0.3" />
-            <rect x="73" y="52" width="18" height="16" fill="#d2b48c" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="75" y="54" width="14" height="12" fill="#f6d7b0" stroke="#4b5563" strokeWidth="0.3" />
-            <rect x="52" y="72" width="20" height="15" fill="#d2b48c" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="55" y="74" width="14" height="11" fill="#f6d7b0" stroke="#4b5563" strokeWidth="0.3" />
-            <rect x="42" y="48" width="18" height="15" fill="#b7d98a" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="45" y="50" width="12" height="11" fill="#bfe58d" stroke="#4b5563" strokeWidth="0.2" />
-            <rect x="30" y="20" width="37" height="20" fill="#c7e5ff" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="74" y="10" width="18" height="16" fill="#f7e6a3" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="36" y="4" width="28" height="14" fill="#b8daf9" stroke="#4b5563" strokeWidth="0.3" />
-
-            <rect x="29" y="35" width="42" height="30" fill="#a8d26f" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="6" y="45" width="18" height="12" fill="#b0dd83" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="30" y="82" width="16" height="12" fill="#d6d3d1" stroke="#4b5563" strokeWidth="0.4" />
-            <rect x="75" y="30" width="17" height="12" fill="#dfe7f3" stroke="#4b5563" strokeWidth="0.4" />
-
-            <path d="M 0 50 H 100" stroke="#8aa0a7" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M 50 0 V 100" stroke="#8aa0a7" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M 0 82 H 100" stroke="#8aa0a7" strokeWidth="2.4" strokeLinecap="round" />
-            <path d="M 0 18 H 100" stroke="#8aa0a7" strokeWidth="2.4" strokeLinecap="round" />
-
-            <g fontSize="3.3" fontWeight="700" fill="#0f172a">
-              <text x="12" y="12">Girls Hostel</text>
-              <text x="39" y="12">R C T Building</text>
-              <text x="74" y="8">Account Dept</text>
-              <text x="73" y="71">Boys Hostel</text>
-              <text x="55" y="89">Temple</text>
-              <text x="14" y="93">Main Gate</text>
-              <text x="30" y="96">Store</text>
-              <text x="28" y="43">Big Ground</text>
-              <text x="10" y="52">Mini Ground</text>
-              <text x="75" y="42">Parking</text>
-            </g>
-
-            {campusBlocks.map((block) => (
-              <g key={block.name}>
-                <text
-                  x={block.x + block.width / 2}
-                  y={block.y + block.height / 2}
-                  textAnchor="middle"
-                  fill="#1f2937"
-                  fontSize="2.2"
-                  fontWeight="700"
-                >
-                  {block.name}
-                </text>
-              </g>
-            ))}
-
-            {coords && (
-              <g>
-                <circle
-                  cx={coords.x}
-                  cy={coords.y}
-                  r="2.3"
-                  fill="#dc2626"
-                  stroke="#fff"
-                  strokeWidth="0.8"
-                />
-                <circle
-                  cx={coords.x}
-                  cy={coords.y}
-                  r="4"
-                  fill="none"
-                  stroke="#dc2626"
-                  strokeWidth="0.5"
-                  opacity="0.7"
-                />
-              </g>
-            )}
           </svg>
         </div>
         {coords && (
@@ -304,10 +241,11 @@ const AddLocationMap = () => {
             <input
               type="text"
               required
+              disabled={submitting}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
-              placeholder="e.g. Computer Lab 1"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
+              placeholder="e.g. Library, Canteen, Main Gate, etc."
             />
           </div>
 
@@ -315,37 +253,59 @@ const AddLocationMap = () => {
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Category</label>
               <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+                value={isCustomCategory ? "Custom" : form.category}
+                disabled={submitting}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "Custom") {
+                    setIsCustomCategory(true);
+                  } else {
+                    setIsCustomCategory(false);
+                    setForm({ ...form, category: val });
+                  }
+                }}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
               >
-                <option value="Building">Building</option>
-                <option value="Library">Library</option>
-                <option value="Canteen">Canteen</option>
-                <option value="Gate">Gate</option>
-                <option value="Classroom">Classroom</option>
-                <option value="Lab">Lab</option>
-                <option value="Office">Office</option>
+                {availableCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="Custom">+ Type custom category...</option>
               </select>
+
+              {isCustomCategory && (
+                <input
+                  type="text"
+                  required
+                  disabled={submitting}
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Enter category name..."
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+                />
+              )}
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Building</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Building (Optional)</label>
               <select
                 value={form.buildingId}
+                disabled={submitting}
                 onChange={(e) => {
-                  const building = buildings.find((item) => item._id === e.target.value);
+                  const buildingId = e.target.value;
+                  const building = buildings.find((item) => item._id === buildingId);
                   setForm({
                     ...form,
-                    buildingId: e.target.value,
-                    building: building?.name || "",
+                    buildingId: buildingId,
+                    building: building ? building.name : "",
                     floor: 0,
                     floorId: "",
                   });
                 }}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
               >
-                <option value="">Select building</option>
+                <option value="">None / Not inside a building</option>
                 {buildings.map((building) => (
                   <option key={building._id} value={building._id}>
                     {building.name}
@@ -356,35 +316,12 @@ const AddLocationMap = () => {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Floor</label>
-            <select
-              value={form.floorId}
-              disabled={!form.buildingId}
-              onChange={(e) => {
-                const floor = floors.find((item) => item._id === e.target.value);
-                setForm({
-                  ...form,
-                  floorId: e.target.value,
-                  floor: floor?.floorNumber ?? floor?.number ?? 0,
-                });
-              }}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
-            >
-              <option value="">Select floor</option>
-              {floors.map((floor) => (
-                <option key={floor._id} value={floor._id}>
-                  {floor.name || `Floor ${floor.floorNumber ?? floor.number ?? 0}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Description</label>
             <textarea
               value={form.description}
+              disabled={submitting}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
               rows="3"
               placeholder="Describe this place, purpose, or timing..."
             />
@@ -395,9 +332,10 @@ const AddLocationMap = () => {
             <input
               type="file"
               multiple
+              disabled={submitting}
               accept="image/*"
               onChange={handleFileChange}
-              className="w-full rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-600 hover:file:bg-blue-100"
+              className="w-full rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-600 hover:file:bg-blue-100 disabled:opacity-50"
             />
           </div>
 
@@ -417,9 +355,16 @@ const AddLocationMap = () => {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+            disabled={submitting}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Save Location
+            {submitting && (
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {submitting ? "Adding location..." : "Save Location"}
           </button>
         </form>
       </div>

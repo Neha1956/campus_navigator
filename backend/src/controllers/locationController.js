@@ -45,7 +45,7 @@ if (mapElementId) {
   name,
   category,
 
-  building: building || "RCIT Building",
+  building: building || null,
 
   buildingId: buildingId || null,
 

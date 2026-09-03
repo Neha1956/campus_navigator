@@ -16,7 +16,7 @@ const locationSchema = new mongoose.Schema(
 
     building: {
       type: String,
-      default: "RCIT Building",
+      default: null,
     },
 
     buildingId: {
