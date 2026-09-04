@@ -1,14 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../api/axios";
 
-const API_URL = "http://localhost:5000/api/map-elements";
+//const API_URL = "http://localhost:5000/api/map-elements";
 
 // Thunks
 export const fetchMapElementsByFloor = createAsyncThunk(
   "mapElements/fetchMapElementsByFloor",
   async (floorId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/floor/${floorId}`);
+      const response = await api.get(`/map-elements/floor/${floorId}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -20,7 +20,7 @@ export const fetchMapElementById = createAsyncThunk(
   "mapElements/fetchMapElementById",
   async (id, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
+      const response = await api.get(`/map-elements/${id}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -32,7 +32,7 @@ export const createMapElement = createAsyncThunk(
   "mapElements/createMapElement",
   async (elementData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(API_URL, elementData);
+      const response = await api.post(`/map-elements`, elementData);
       return response.data.element;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -44,7 +44,7 @@ export const updateMapElement = createAsyncThunk(
   "mapElements/updateMapElement",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${API_URL}/${id}`, data);
+      const response = await api.put(`/map-elements/${id}`, data);
       return response.data.element;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -56,7 +56,7 @@ export const updateElementPosition = createAsyncThunk(
   "mapElements/updateElementPosition",
   async ({ id, position }, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${API_URL}/${id}/position`, { position });
+      const response = await api.patch(`/map-elements/${id}/position`, { position });
       return response.data.element;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -68,7 +68,7 @@ export const updateElementDimensions = createAsyncThunk(
   "mapElements/updateElementDimensions",
   async ({ id, dimensions }, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${API_URL}/${id}/dimensions`, { dimensions });
+      const response = await api.patch(`/map-elements/${id}/dimensions`, { dimensions });
       return response.data.element;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -80,7 +80,7 @@ export const deleteMapElement = createAsyncThunk(
   "mapElements/deleteMapElement",
   async (id, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await api.delete(`/map-elements/${id}`);
       return id;
     } catch (error) {
       return rejectWithValue(error.response.data.message);

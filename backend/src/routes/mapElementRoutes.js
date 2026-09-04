@@ -10,7 +10,7 @@ import {
   deleteMapElement,
   batchUpdateElements,
 } from "../controllers/mapElementController.js";
-
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // Get all map elements for a floor
@@ -20,24 +20,24 @@ router.get("/floor/:floorId", getMapElementsByFloorId);
 router.get("/:id", getMapElementById);
 
 // Create map element
-router.post("/", createMapElement);
+router.post("/", verifyAdmin, createMapElement);
 
 // Update map element
-router.put("/:id", updateMapElement);
+router.put("/:id", verifyAdmin, updateMapElement);
 
 // Update element position (for drag-drop)
-router.patch("/:id/position", updateElementPosition);
+router.patch("/:id/position", verifyAdmin, updateElementPosition);
 
 // Update element dimensions (for resize)
-router.patch("/:id/dimensions", updateElementDimensions);
+router.patch("/:id/dimensions", verifyAdmin, updateElementDimensions);
 
 // Add connection to another element
-router.post("/:id/connect", addElementConnection);
+router.post("/:id/connect", verifyAdmin, addElementConnection);
 
 // Batch update elements
-router.patch("/batch/update", batchUpdateElements);
+router.patch("/batch/update", verifyAdmin, batchUpdateElements);
 
 // Delete map element
-router.delete("/:id", deleteMapElement);
+router.delete("/:id", verifyAdmin, deleteMapElement);
 
 export default router;

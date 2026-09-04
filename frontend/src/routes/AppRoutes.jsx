@@ -12,52 +12,77 @@ import RouteManagement from "../pages/admin/RouteManagement";
 import AdminMapManagement from "../pages/admin/AdminMapManagement";
 import Campus3DMapPage from "../pages/Campus3DMap";
 import AdminCampusBuilder from "../pages/admin/AdminCampusBuilder";
+import AdminLogin from "../pages/admin/AdminLogin";
+import ProtectedRoute from "../utils/ProtectedRoute";
+
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-
       <Route path="/map" element={<MapPage />} />
-
       <Route path="/campus-3d" element={<Campus3DMapPage />} />
-
       <Route path="/locations" element={<Locations />} />
-
-      <Route
-        path="/locations/:id"
-        element={<LocationDetailsPage />}
-      />
-
+      <Route path="/locations/:id" element={<LocationDetailsPage />} />
       <Route path="/directions" element={<Directions />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
 
-      <Route path="/admin" element={<AdminDashboard />} />
-
+      {/* Protected Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/add-location"
-        element={<AddLocationMap />} />
-
+        element={
+          <ProtectedRoute>
+            <AddLocationMap />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/edit-location/:id"
-        element={<AddLocationMap />} />
-
+        element={
+          <ProtectedRoute>
+            <AddLocationMap />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/manage-locations"
-        element={<ManageLocations />}
+        element={
+          <ProtectedRoute>
+            <ManageLocations />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/admin/add-route"
-        element={<RouteManagement />}
+        element={
+          <ProtectedRoute>
+            <RouteManagement />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path="/admin/map-builder"
-        element={<AdminMapManagement />}
+        element={
+          <ProtectedRoute>
+            <AdminMapManagement />
+          </ProtectedRoute>
+        }
       />
       <Route
-  path="/admin/campus-builder"
-  element={<AdminCampusBuilder />}
-/>
+        path="/admin/campus-builder"
+        element={
+          <ProtectedRoute>
+            <AdminCampusBuilder />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 };

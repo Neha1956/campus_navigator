@@ -6,6 +6,7 @@ import {
   updateBuilding,
   deleteBuilding,
 } from "../controllers/buildingController.js";
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -16,12 +17,12 @@ router.get("/", getAllBuildings);
 router.get("/:id", getBuildingById);
 
 // Create building
-router.post("/", createBuilding);
+router.post("/", verifyAdmin, createBuilding);
 
 // Update building
-router.put("/:id", updateBuilding);
+router.put("/:id", verifyAdmin, updateBuilding);
 
 // Delete building
-router.delete("/:id", deleteBuilding);
+router.delete("/:id", verifyAdmin, deleteBuilding);
 
 export default router;

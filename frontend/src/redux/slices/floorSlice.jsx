@@ -1,14 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../api/axios";
 
-const API_URL = "http://localhost:5000/api/floors";
+//const API_URL = "http://localhost:5000/api/floors";
 
 // Thunks
 export const fetchFloorsByBuilding = createAsyncThunk(
   "floors/fetchFloorsByBuilding",
   async (buildingId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/building/${buildingId}`);
+      const response = await api.get(`/floors/building/${buildingId}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -20,7 +20,7 @@ export const fetchFloorById = createAsyncThunk(
   "floors/fetchFloorById",
   async (id, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
+      const response = await api.get(`/floors/${id}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -32,7 +32,7 @@ export const createFloor = createAsyncThunk(
   "floors/createFloor",
   async (floorData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(API_URL, floorData);
+      const response = await api.post(`/floors`, floorData);
       return response.data.floor;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -44,7 +44,7 @@ export const updateFloor = createAsyncThunk(
   "floors/updateFloor",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${API_URL}/${id}`, data);
+      const response = await api.put(`/floors/${id}`, data);
       return response.data.floor;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -56,7 +56,7 @@ export const updateFloorLayout = createAsyncThunk(
   "floors/updateFloorLayout",
   async ({ id, layoutData }, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${API_URL}/${id}/layout`, { layoutData });
+      const response = await api.patch(`/floors/${id}/layout`, { layoutData });
       return response.data.floor;
     } catch (error) {
       return rejectWithValue(error.response.data.message);
@@ -68,7 +68,7 @@ export const deleteFloor = createAsyncThunk(
   "floors/deleteFloor",
   async (id, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await api.delete(`/floors/${id}`);
       return id;
     } catch (error) {
       return rejectWithValue(error.response.data.message);

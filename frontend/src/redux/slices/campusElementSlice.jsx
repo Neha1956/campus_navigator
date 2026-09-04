@@ -3,10 +3,9 @@ import {
   createAsyncThunk,
 } from "@reduxjs/toolkit";
 
-import axios from "axios";
+import api from "../../api/axios";
 
-const API_URL =
-  "http://localhost:5000/api/campus-elements";
+//const API_URL = "http://localhost:5000/api/campus-elements";
 
 /* =====================================================
    FETCH
@@ -18,7 +17,7 @@ export const fetchCampusElements =
     async (_, { rejectWithValue }) => {
       try {
         const response =
-          await axios.get(API_URL);
+          await api.get(`/campus-elements`);
 
         const data = response.data;
 
@@ -54,8 +53,8 @@ export const fetchCampusElementById =
     async (id, { rejectWithValue }) => {
       try {
         const response =
-          await axios.get(
-            `${API_URL}/${id}`
+          await api.get(
+            `/campus-elements/${id}`
           );
 
         return (
@@ -82,8 +81,8 @@ export const createCampusElement =
     async (data, { rejectWithValue }) => {
       try {
         const response =
-          await axios.post(
-            API_URL,
+          await api.post(
+            `/campus-elements`,
             data
           );
 
@@ -114,8 +113,8 @@ export const updateCampusElement =
     ) => {
       try {
         const response =
-          await axios.put(
-            `${API_URL}/${id}`,
+          await api.put(
+            `/campus-elements/${id}`,
             data
           );
 
@@ -145,8 +144,8 @@ export const deleteCampusElement =
       { rejectWithValue }
     ) => {
       try {
-        await axios.delete(
-          `${API_URL}/${id}`
+        await api.delete(
+          `/campus-elements/${id}`
         );
 
         return id;

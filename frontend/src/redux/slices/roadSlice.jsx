@@ -1,10 +1,10 @@
 
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../api/axios";
 
-const API_URL =
+/*const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:5000/api";
+  "http://localhost:5000/api";*/
 
 /* =========================================================
    FETCH ROADS
@@ -14,9 +14,7 @@ export const fetchRoads = createAsyncThunk(
   "roads/fetchRoads",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `${API_URL}/roads`
-      );
+      const response = await api.get(`/roads`);
 
       return response.data.roads;
     } catch (error) {
@@ -36,8 +34,8 @@ export const createRoad = createAsyncThunk(
   "roads/createRoad",
   async (roadData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        `${API_URL}/roads`,
+      const response = await api.post(
+        `/roads`,
         roadData
       );
 
@@ -62,8 +60,8 @@ export const updateRoad = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.put(
-        `${API_URL}/roads/${id}`,
+      const response = await api.put(
+        `/roads/${id}`,
         data
       );
 
@@ -85,8 +83,8 @@ export const deleteRoad = createAsyncThunk(
   "roads/deleteRoad",
   async (id, { rejectWithValue }) => {
     try {
-      await axios.delete(
-        `${API_URL}/roads/${id}`
+      await api.delete(
+        `/roads/${id}`
       );
 
       return id;

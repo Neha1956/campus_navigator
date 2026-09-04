@@ -1,47 +1,47 @@
-import axios from "axios";
+import api from "./axios";
 
-const API_URL = "http://localhost:5000/api";
+//const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 // Building APIs
 export const buildingAPI = {
-  getAll: () => axios.get(`${API_URL}/buildings`),
-  getById: (id) => axios.get(`${API_URL}/buildings/${id}`),
-  create: (data) => axios.post(`${API_URL}/buildings`, data),
-  update: (id, data) => axios.put(`${API_URL}/buildings/${id}`, data),
-  delete: (id) => axios.delete(`${API_URL}/buildings/${id}`),
+  getAll: () => api.get(`/buildings`),
+  getById: (id) => api.get(`/buildings/${id}`),
+  create: (data) => api.post(`/buildings`, data),
+  update: (id, data) => api.put(`/buildings/${id}`, data),
+  delete: (id) => api.delete(`/buildings/${id}`),
 };
 
 // Floor APIs
 export const floorAPI = {
   getByBuilding: (buildingId) =>
-    axios.get(`${API_URL}/floors/building/${buildingId}`),
-  getById: (id) => axios.get(`${API_URL}/floors/${id}`),
-  create: (data) => axios.post(`${API_URL}/floors`, data),
-  update: (id, data) => axios.put(`${API_URL}/floors/${id}`, data),
+    api.get(`/floors/building/${buildingId}`),
+  getById: (id) => api.get(`/floors/${id}`),
+  create: (data) => api.post(`/floors`, data),
+  update: (id, data) => api.put(`/floors/${id}`, data),
   updateLayout: (id, layoutData) =>
-    axios.patch(`${API_URL}/floors/${id}/layout`, { layoutData }),
-  delete: (id) => axios.delete(`${API_URL}/floors/${id}`),
+    api.patch(`/floors/${id}/layout`, { layoutData }),
+  delete: (id) => api.delete(`/floors/${id}`),
 };
 
 // Map Element APIs
 export const mapElementAPI = {
   getByFloor: (floorId) =>
-    axios.get(`${API_URL}/map-elements/floor/${floorId}`),
-  getById: (id) => axios.get(`${API_URL}/map-elements/${id}`),
-  create: (data) => axios.post(`${API_URL}/map-elements`, data),
-  update: (id, data) => axios.put(`${API_URL}/map-elements/${id}`, data),
+    api.get(`/map-elements/floor/${floorId}`),
+  getById: (id) => api.get(`/map-elements/${id}`),
+  create: (data) => api.post(`/map-elements`, data),
+  update: (id, data) => api.put(`/map-elements/${id}`, data),
   updatePosition: (id, position) =>
-    axios.patch(`${API_URL}/map-elements/${id}/position`, { position }),
+    api.patch(`/map-elements/${id}/position`, { position }),
   updateDimensions: (id, dimensions) =>
-    axios.patch(`${API_URL}/map-elements/${id}/dimensions`, { dimensions }),
+    api.patch(`/map-elements/${id}/dimensions`, { dimensions }),
   addConnection: (id, connectElementId, connectFloorId) =>
-    axios.post(`${API_URL}/map-elements/${id}/connect`, {
+    api.post(`/map-elements/${id}/connect`, {
       connectElementId,
       connectFloorId,
     }),
-  delete: (id) => axios.delete(`${API_URL}/map-elements/${id}`),
+  delete: (id) => api.delete(`/map-elements/${id}`),
   batchUpdate: (elementIds, updates) =>
-    axios.patch(`${API_URL}/map-elements/batch/update`, {
+    api.patch(`/map-elements/batch/update`, {
       elementIds,
       updates,
     }),

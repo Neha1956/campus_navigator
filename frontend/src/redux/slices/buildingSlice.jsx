@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../api/axios";
 
-const API_URL = "http://localhost:5000/api/buildings";
+//const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 // ==========================================
 // FETCH ALL BUILDINGS
@@ -10,7 +10,7 @@ export const fetchBuildings = createAsyncThunk(
   "buildings/fetchBuildings",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(API_URL);
+      const response = await api.get(`/buildings`);
 
       console.log("FETCH BUILDINGS:", response.data);
 
@@ -50,7 +50,7 @@ export const fetchBuildingById = createAsyncThunk(
   "buildings/fetchBuildingById",
   async (id, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
+      const response = await api.get(`/buildings/${id}`);
 
       return (
         response.data?.building ||
@@ -73,8 +73,8 @@ export const createBuilding = createAsyncThunk(
   "buildings/createBuilding",
   async (buildingData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        API_URL,
+      const response = await api.post(
+        `/buildings`,
         buildingData
       );
 
@@ -106,8 +106,8 @@ export const updateBuilding = createAsyncThunk(
   "buildings/updateBuilding",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(
-        `${API_URL}/${id}`,
+      const response = await api.put(
+        `/buildings/${id}`,
         data
       );
 
@@ -132,7 +132,7 @@ export const deleteBuilding = createAsyncThunk(
   "buildings/deleteBuilding",
   async (id, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await api.delete(`/buildings/${id}`);
 
       return id;
     } catch (error) {

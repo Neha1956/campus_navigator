@@ -8,6 +8,7 @@ import floorReducer from "./slices/floorSlice";
 import mapElementReducer from "./slices/mapElementSlice";
 import roadReducer from "./slices/roadSlice"
 import campusElementsReducer from "./slices/campusElementSlice";
+import authReducer from "./slices/authSlice";
 export const store = configureStore({
   reducer: {
     locations: locationReducer,
@@ -19,5 +20,6 @@ export const store = configureStore({
     roads: roadReducer,
     campusElements:
       campusElementsReducer,
+    auth: authReducer,
   },
 });

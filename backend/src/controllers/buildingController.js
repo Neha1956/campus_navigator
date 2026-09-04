@@ -1,4 +1,6 @@
 import Building from "../models/Building.js";
+import Floor from "../models/Floor.js";
+import MapElement from "../models/MapElement.js";
 
 // ==========================================
 // GET ALL BUILDINGS
@@ -48,7 +50,6 @@ export const getBuildingById = async (req, res) => {
   } catch (error) {
     console.error("Get building error:", error);
 
-    // Invalid MongoDB ObjectId
     if (error.name === "CastError") {
       return res.status(400).json({
         success: false,
@@ -82,7 +83,6 @@ export const createBuilding = async (req, res) => {
       isActive,
     } = req.body;
 
-    // Required fields validation
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -114,7 +114,6 @@ export const createBuilding = async (req, res) => {
       });
     }
 
-    // Check duplicate building name
     const existingBuilding = await Building.findOne({
       name: name.trim(),
     });
@@ -126,7 +125,6 @@ export const createBuilding = async (req, res) => {
       });
     }
 
-    // Create building
     const building = await Building.create({
       name: name.trim(),
       description: description || "",
@@ -141,14 +139,13 @@ export const createBuilding = async (req, res) => {
         depth: dimensions.depth,
         height: dimensions.height,
       },
-     rotation: rotation ?? 0,
+      rotation: rotation ?? 0,
       color: color || "#E8E8E8",
       icon: icon || "building",
       image: image || "",
       isActive: isActive ?? true,
     });
 
-    // Populate floors
     await building.populate("floors");
 
     res.status(201).json({
@@ -159,7 +156,6 @@ export const createBuilding = async (req, res) => {
   } catch (error) {
     console.error("Create building error:", error);
 
-    // Duplicate key error
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -195,7 +191,6 @@ export const updateBuilding = async (req, res) => {
       isActive,
     } = req.body;
 
-    // Check if building exists
     const existingBuilding = await Building.findById(id);
 
     if (!existingBuilding) {
@@ -205,7 +200,6 @@ export const updateBuilding = async (req, res) => {
       });
     }
 
-    // Check duplicate name
     if (name && name.trim() !== existingBuilding.name) {
       const duplicateBuilding = await Building.findOne({
         name: name.trim(),
@@ -220,7 +214,6 @@ export const updateBuilding = async (req, res) => {
       }
     }
 
-    // Update fields only if provided
     if (name !== undefined) {
       existingBuilding.name = name.trim();
     }
@@ -271,9 +264,9 @@ export const updateBuilding = async (req, res) => {
       };
     }
 
-   if (rotation !== undefined) {
-  existingBuilding.rotation = Number(rotation);
-}
+    if (rotation !== undefined) {
+      existingBuilding.rotation = Number(rotation);
+    }
 
     if (color !== undefined) {
       existingBuilding.color = color;
@@ -326,7 +319,7 @@ export const updateBuilding = async (req, res) => {
 };
 
 // ==========================================
-// DELETE BUILDING
+// DELETE BUILDING (WITH CASCADE DELETE)
 // ==========================================
 export const deleteBuilding = async (req, res) => {
   try {
@@ -341,11 +334,20 @@ export const deleteBuilding = async (req, res) => {
       });
     }
 
+    // Find and delete associated floors and their map elements
+    const floors = await Floor.find({ buildingId: id });
+    const floorIds = floors.map((f) => f._id);
+
+    if (floorIds.length > 0) {
+      await MapElement.deleteMany({ floorId: { $in: floorIds } });
+      await Floor.deleteMany({ buildingId: id });
+    }
+
     await Building.findByIdAndDelete(id);
 
     res.status(200).json({
       success: true,
-      message: "Building deleted successfully",
+      message: "Building and all its floors/elements deleted successfully",
     });
   } catch (error) {
     console.error("Delete building error:", error);

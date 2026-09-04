@@ -8,7 +8,7 @@ import {
   updateRoad,
   deleteRoad,
 } from "../controllers/roadController.js";
-
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 /*
@@ -23,11 +23,11 @@ router.get("/", getRoads);
 
 router.get("/:id", getRoadById);
 
-router.post("/", createRoad);
+router.post("/", verifyAdmin, createRoad);
 
-router.put("/:id", updateRoad);
+router.put("/:id", verifyAdmin, updateRoad);
 
-router.delete("/:id", deleteRoad);
+router.delete("/:id", verifyAdmin, deleteRoad);
 
 export default router;
 

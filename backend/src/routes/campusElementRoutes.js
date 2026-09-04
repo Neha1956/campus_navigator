@@ -7,7 +7,7 @@ import {
   updateCampusElement,
   deleteCampusElement,
 } from "../controllers/campusElementController.js";
-
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 /* GET ALL */
@@ -25,18 +25,21 @@ router.get(
 /* CREATE */
 router.post(
   "/",
+  verifyAdmin,
   createCampusElement
 );
 
 /* UPDATE */
 router.put(
   "/:id",
+  verifyAdmin,
   updateCampusElement
 );
 
 /* DELETE */
 router.delete(
   "/:id",
+  verifyAdmin,
   deleteCampusElement
 );
 

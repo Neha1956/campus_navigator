@@ -9,9 +9,17 @@ import floorRoutes from "./routes/floorRoutes.js";
 import mapElementRoutes from "./routes/mapElementRoutes.js";
 import roadRoutes from "./routes/roadRoutes.js";
 import campusElementRoutes from "./routes/campusElementRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -58,4 +66,5 @@ app.use(
   "/api/campus-elements",
   campusElementRoutes
 );
+app.use("/api/auth", authRoutes);
 export default app;

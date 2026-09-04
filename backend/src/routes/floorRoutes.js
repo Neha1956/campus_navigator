@@ -7,7 +7,7 @@ import {
   deleteFloor,
   updateFloorLayout,
 } from "../controllers/floorController.js";
-
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // Get all floors for a building
@@ -17,15 +17,15 @@ router.get("/building/:buildingId", getFloorsByBuildingId);
 router.get("/:id", getFloorById);
 
 // Create floor
-router.post("/", createFloor);
+router.post("/", verifyAdmin, createFloor);
 
 // Update floor
-router.put("/:id", updateFloor);
+router.put("/:id", verifyAdmin, updateFloor);
 
 // Update floor layout
-router.patch("/:id/layout", updateFloorLayout);
+router.patch("/:id/layout", verifyAdmin, updateFloorLayout);
 
 // Delete floor
-router.delete("/:id", deleteFloor);
+router.delete("/:id", verifyAdmin, deleteFloor);
 
 export default router;

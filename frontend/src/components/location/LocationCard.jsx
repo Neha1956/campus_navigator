@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 const LocationCard = ({ location }) => {
 
   const navigate = useNavigate();
-
+console.log(location);
   const getIcon = () => {
 
     switch (location.icon) {

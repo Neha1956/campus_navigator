@@ -613,17 +613,13 @@ const AdminCampusBuilder = () => {
   };
 
   const handleCampusCanvasClick = (event, worldCoords = null) => {
-    if (!CAMPUS_ELEMENT_TYPES.includes(activeTool)) return;
-
     let targetX = 0;
     let targetY = 0;
 
-    // Direct 3D Raycaster world click support
     if (worldCoords && typeof worldCoords.x === "number") {
       targetX = worldCoords.x;
       targetY = worldCoords.y;
     } else if (event && campusCanvasRef.current) {
-      // 2D SVG Coordinate calculation
       const svg = campusCanvasRef.current;
       const point = svg.createSVGPoint();
       point.x = event.clientX;
@@ -637,6 +633,30 @@ const AdminCampusBuilder = () => {
     } else {
       return;
     }
+
+    const snappedX = Math.max(0, snapToGrid(targetX));
+    const snappedY = Math.max(0, snapToGrid(targetY));
+
+    // Agar activeTool "road" hai toh direct road create karein bina buildings requirement ke
+    if (activeTool === "road") {
+      const newRoadData = {
+        name: "Campus Pathway",
+        type: "road",
+        points: [
+          { x: snappedX - 60, y: snappedY },
+          { x: snappedX + 60, y: snappedY },
+        ],
+        width: Number(roadForm.width) || 20,
+        color: roadForm.color || "#64748B",
+        distance: 0,
+        walkingTime: 0,
+      };
+      createCampusRoad(newRoadData);
+      setActiveTool("select");
+      return;
+    }
+
+    if (!CAMPUS_ELEMENT_TYPES.includes(activeTool)) return;
 
     const defaultColors = {
       parking: "#CBD5E1",
@@ -671,8 +691,8 @@ const AdminCampusBuilder = () => {
       name: activeTool.replace("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
       type: activeTool,
       position: {
-        x: Math.max(0, snapToGrid(targetX)),
-        y: Math.max(0, snapToGrid(targetY)),
+        x: snappedX,
+        y: snappedY,
         z: 0,
       },
       dimensions: {
@@ -769,45 +789,49 @@ const AdminCampusBuilder = () => {
 
   /* =======================================================
      ROAD ACTIONS
-  ========================================================= */
+  ======================================================= */
 
   const handleCreateRoad = async () => {
     if (!roadForm.name.trim()) {
       alert("Please enter road name");
       return;
     }
-    if (!roadForm.fromBuilding || !roadForm.toBuilding) {
-      alert("Please select both buildings");
-      return;
-    }
-    if (roadForm.fromBuilding === roadForm.toBuilding) {
-      alert("From Building and To Building cannot be same");
-      return;
-    }
 
-    const fromBuilding = buildings.find((b) => b._id === roadForm.fromBuilding);
-    const toBuilding = buildings.find((b) => b._id === roadForm.toBuilding);
-    if (!fromBuilding || !toBuilding) return;
+    let defaultPoints = [
+      { x: 150, y: 150 },
+      { x: 350, y: 150 },
+    ];
 
-    const fromX = Number(fromBuilding.position?.x ?? fromBuilding.x ?? 0);
-    const fromY = Number(fromBuilding.position?.y ?? fromBuilding.y ?? 0);
-    const toX = Number(toBuilding.position?.x ?? toBuilding.x ?? 0);
-    const toY = Number(toBuilding.position?.y ?? toBuilding.y ?? 0);
+    if (roadForm.fromBuilding && roadForm.toBuilding) {
+      const fromBuilding = buildings.find((b) => b._id === roadForm.fromBuilding);
+      const toBuilding = buildings.find((b) => b._id === roadForm.toBuilding);
+      if (fromBuilding && toBuilding) {
+        const fromX = Number(fromBuilding.position?.x ?? fromBuilding.x ?? 0);
+        const fromY = Number(fromBuilding.position?.y ?? fromBuilding.y ?? 0);
+        const toX = Number(toBuilding.position?.x ?? toBuilding.x ?? 0);
+        const toY = Number(toBuilding.position?.y ?? toBuilding.y ?? 0);
+        defaultPoints = [
+          { x: fromX, y: fromY },
+          { x: toX, y: toY },
+        ];
+      }
+    }
 
     const points =
       Array.isArray(roadForm.points) && roadForm.points.length >= 2
         ? roadForm.points
-        : [
-            { x: fromX, y: fromY },
-            { x: toX, y: toY },
-          ];
+        : defaultPoints;
 
     try {
       await dispatch(
         createRoad({
-          ...roadForm,
+          name: roadForm.name.trim(),
+          type: roadForm.type || "road",
+          fromBuilding: roadForm.fromBuilding || null,
+          toBuilding: roadForm.toBuilding || null,
           points,
           width: Number(roadForm.width) || 20,
+          color: roadForm.color || "#64748B",
           distance: Number(roadForm.distance) || 0,
           walkingTime: Number(roadForm.walkingTime) || 0,
         })
@@ -904,7 +928,7 @@ const AdminCampusBuilder = () => {
 
   /* =======================================================
      FLOOR LEVEL ACTIONS
-  ========================================================= */
+  ======================================================= */
 
   const handleCreateFloor = async () => {
     if (!currentBuilding?._id) {
@@ -1219,7 +1243,7 @@ const AdminCampusBuilder = () => {
               setSelectedElement={setSelectedElement}
               setSelectedCampusElement={setSelectedCampusElement}
               fitToContainer={true}
-              showOpenFloorsOn3D={false} // Admin mode: No "Open Floors" on 3D objects
+              showOpenFloorsOn3D={false}
             />
           )}
 

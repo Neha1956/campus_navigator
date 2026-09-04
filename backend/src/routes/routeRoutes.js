@@ -8,7 +8,7 @@ import {
   deleteRoute,
   getRouteBetweenLocations,
 } from "../controllers/routeController.js";
-
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // Get all routes
@@ -25,12 +25,12 @@ router.get(
 router.get("/:id", getRouteById);
 
 // Create route
-router.post("/", createRoute);
+router.post("/", verifyAdmin, createRoute);
 
 // Update route
-router.put("/:id", updateRoute);
+router.put("/:id", verifyAdmin, updateRoute);
 
 // Delete route
-router.delete("/:id", deleteRoute);
+router.delete("/:id", verifyAdmin, deleteRoute);
 
 export default router;

@@ -7,14 +7,14 @@ import {
   updateLocation,
   deleteLocation,
 } from "../controllers/locationController.js";
-
+import { verifyAdmin } from "../middlewares/authMiddleware.js";
 import upload from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
 router.post(
   "/",
-  upload.fields([
+ verifyAdmin, upload.fields([
     { name: "image", maxCount: 1 },
     { name: "images", maxCount: 10 },
   ]),
@@ -33,6 +33,7 @@ router.get(
 
 router.put(
   "/:id",
+  verifyAdmin,
   upload.fields([
     { name: "image", maxCount: 1 },
     { name: "images", maxCount: 10 },
@@ -42,6 +43,7 @@ router.put(
 
 router.delete(
   "/:id",
+  verifyAdmin,
   deleteLocation
 );
 

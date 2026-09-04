@@ -85,13 +85,13 @@ export const createRoad = async (req, res) => {
         message: "Road name is required",
       });
     }
-
+/*
     if (!points || !Array.isArray(points) || points.length < 2) {
       return res.status(400).json({
         success: false,
         message: "At least 2 road points are required",
       });
-    }
+    }*/
 
     const road = await Road.create({
       name,
