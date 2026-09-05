@@ -1,6 +1,31 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios";
 
+const getValidStoredToken = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const encodedPayload = token.split(".")[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const payload = JSON.parse(atob(encodedPayload));
+    if (payload.exp && payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return null;
+    }
+  } catch {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    return null;
+  }
+
+  return token;
+};
+
+const storedToken = getValidStoredToken();
+
 //const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // Async thunk for Admin Login
@@ -26,8 +51,8 @@ export const loginAdmin = createAsyncThunk(
 
 const initialState = {
   user: JSON.parse(localStorage.getItem("user")) || null,
-  token: localStorage.getItem("token") || null,
-  isAuthenticated: Boolean(localStorage.getItem("token")),
+  token: storedToken,
+  isAuthenticated: Boolean(storedToken),
   loading: false,
   error: null,
 };

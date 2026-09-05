@@ -10,8 +10,8 @@ const getRoadNetworkPath = (roads, fromLocation, toLocation) => {
   const rawSegments = [];
   const endpointNodes = new Set();
 
-  const addNode = (point) => {
-    const key = `${Number(point.x).toFixed(2)},${Number(point.y).toFixed(2)}`;
+  const addNode = (point, customKey) => {
+    const key = customKey || `${Number(point.x).toFixed(2)},${Number(point.y).toFixed(2)}`;
     if (!nodes.has(key)) {
       const node = { key, x: Number(point.x), y: Number(point.y) };
       nodes.set(key, node);
@@ -86,6 +86,40 @@ const getRoadNetworkPath = (roads, fromLocation, toLocation) => {
     }
   }
 
+  // Connect T-junctions where one road ends on the middle of another road.
+  endpointNodes.forEach((endpointKey) => {
+    const endpoint = nodes.get(endpointKey);
+    rawSegments.forEach((segment) => {
+      const deltaX = segment.to.x - segment.from.x;
+      const deltaY = segment.to.y - segment.from.y;
+      const lengthSquared = deltaX ** 2 + deltaY ** 2;
+      if (!lengthSquared) return;
+
+      const ratio = Math.max(
+        0,
+        Math.min(
+          1,
+          ((endpoint.x - segment.from.x) * deltaX +
+            (endpoint.y - segment.from.y) * deltaY) /
+            lengthSquared
+        )
+      );
+      const point = {
+        x: segment.from.x + ratio * deltaX,
+        y: segment.from.y + ratio * deltaY,
+      };
+
+      if (Math.hypot(endpoint.x - point.x, endpoint.y - point.y) > 35) {
+        return;
+      }
+
+      const junction = addNode(point);
+      addEdge(endpoint, junction);
+      addEdge(segment.from, junction);
+      addEdge(junction, segment.to);
+    });
+  });
+
   const endpointList = [...endpointNodes].map((key) => nodes.get(key));
   for (let firstIndex = 0; firstIndex < endpointList.length; firstIndex += 1) {
     for (let secondIndex = firstIndex + 1; secondIndex < endpointList.length; secondIndex += 1) {
@@ -128,8 +162,7 @@ const getRoadNetworkPath = (roads, fromLocation, toLocation) => {
     const node = addNode({
       x: nearest.point.x,
       y: nearest.point.y,
-      key: `${prefix}-${location._id}`,
-    });
+    }, `${prefix}-${location._id}`);
     addEdge(nearest.segment.from, node);
     addEdge(node, nearest.segment.to);
     return { node, distance: nearest.distance };
@@ -137,9 +170,9 @@ const getRoadNetworkPath = (roads, fromLocation, toLocation) => {
 
   const source = attachToRoad(fromLocation, "source");
   const destination = attachToRoad(toLocation, "destination");
-  if (!source.node || !destination.node) return null;
+  if (!source?.node || !destination?.node) return null;
 
-  const distances = new Map([[source.node.key, source.distance]]);
+  const distances = new Map([[source.node.key, 0]]);
   const previous = new Map();
   const visited = new Set();
 
@@ -202,7 +235,7 @@ const getRoadNetworkPath = (roads, fromLocation, toLocation) => {
   });
 
   return {
-    distance: path.reduce((total, segment) => total + segment.distance, 0),
+    distance: source.distance + distances.get(destination.node.key) + destination.distance,
     path,
   };
 };
@@ -519,16 +552,19 @@ export const getRouteBetweenLocations = async (req, res) => {
     );
 
     const roads = await Road.find({ isActive: { $ne: false } });
+    const usableRoads = roads.filter(
+      (road) => Array.isArray(road.points) && road.points.length >= 2
+    );
 
     // Dijkstra Pathfinding Execution
-    const result =
-      getRoadNetworkPath(roads, fromLocation, toLocation) ||
-      getShortestPath(routes, from, to);
+    const result = usableRoads.length
+      ? getRoadNetworkPath(usableRoads, fromLocation, toLocation)
+      : getShortestPath(routes, from, to);
 
     if (!result) {
       return res.status(404).json({
         success: false,
-        message: roads.length
+        message: usableRoads.length
           ? "No road path available between these locations"
           : "No campus roads available",
       });

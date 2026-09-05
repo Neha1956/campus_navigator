@@ -32,4 +32,23 @@ api.interceptors.request.use(
   }
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || "";
+
+    if ((status === 401 || status === 403) && !requestUrl.includes("/auth/login")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      if (window.location.pathname !== "/admin/login") {
+        window.location.replace("/admin/login");
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default api;
