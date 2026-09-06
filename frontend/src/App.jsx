@@ -24,7 +24,7 @@ const App = () => {
             setSidebarOpen={setSidebarOpen}
           />
 
-          <main className="min-w-0 flex-1">
+          <main className="min-h-screen flex-1">
             <AppRoutes />
           </main>
 
