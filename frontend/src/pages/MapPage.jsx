@@ -84,7 +84,6 @@ const Building3D = ({ building, onOpen, hideLabels }) => {
         <lineBasicMaterial color="#334155" linewidth={1} />
       </lineSegments>
 
-      {/* Modal open hone par label chhip jayega */}
       {!hideLabels && (
         <Html
           position={[0, height / 2 + 15, 0]}
@@ -327,43 +326,93 @@ const CampusViewer3DInternal = ({
 };
 
 /* =========================================================
-   3D FLOOR VIEWER
+   3D FLOOR VIEWER (WITH DYNAMIC EXPANSION)
 ========================================================= */
 
 const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
-  const width = Number(floor?.width || 1000);
-  const depth = Number(floor?.height || 700);
+  // Elements ke hisaab se floor boundaries calculate karein
+  const bounds = useMemo(() => {
+    const baseW = Number(floor?.width || 1200);
+    const baseH = Number(floor?.height || 800);
+    const PADDING = 250;
+
+    let minX = 0;
+    let minZ = 0;
+    let maxX = baseW;
+    let maxZ = baseH;
+
+    elements.forEach((el) => {
+      const pos = el.position || {};
+      const dim = el.dimensions || {};
+
+      const x = Number(pos.x || 0);
+      const z = Number(pos.y || 0);
+      const w = Number(dim.width || 100);
+      const d = Number(dim.depth || dim.height || 80);
+
+      minX = Math.min(minX, x);
+      minZ = Math.min(minZ, z);
+      maxX = Math.max(maxX, x + w);
+      maxZ = Math.max(maxZ, z + d);
+    });
+
+    const calculatedWidth = Math.max(baseW, maxX - minX + PADDING * 2);
+    const calculatedDepth = Math.max(baseH, maxZ - minZ + PADDING * 2);
+
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+
+    return {
+      width: calculatedWidth,
+      depth: calculatedDepth,
+      centerX,
+      centerZ,
+    };
+  }, [floor, elements]);
+
+  const cameraDist = Math.max(bounds.width, bounds.depth);
 
   return (
     <div className="w-full h-full min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
       <Canvas
         shadows
         camera={{
-          position: [width * 0.7, 700, depth * 1.1],
+          position: [bounds.centerX + cameraDist * 0.6, Math.max(cameraDist * 0.7, 700), bounds.centerZ + cameraDist * 0.7],
           fov: 45,
           near: 0.1,
-          far: 10000,
+          far: 20000,
         }}
       >
         <ambientLight intensity={1.5} />
-        <directionalLight position={[500, 900, 500]} intensity={2} castShadow />
+        <directionalLight
+          position={[bounds.centerX + 400, 1200, bounds.centerZ + 400]}
+          intensity={2}
+          castShadow
+        />
         <Environment preset="city" />
 
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, -1, depth / 2]} receiveShadow>
-          <planeGeometry args={[width, depth]} />
-          <meshStandardMaterial color="#F8FAFC" />
+        {/* DYNAMIC FLOOR PLANE */}
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[bounds.centerX, -1, bounds.centerZ]}
+          receiveShadow
+        >
+          <planeGeometry args={[bounds.width, bounds.depth]} />
+          <meshStandardMaterial color={floor?.backgroundColor || "#F8FAFC"} />
         </mesh>
 
+        {/* DYNAMIC FLOOR GRID */}
         <Grid
-          args={[width, depth]}
+          args={[bounds.width, bounds.depth]}
           cellSize={20}
           cellThickness={0.5}
           sectionSize={100}
           sectionThickness={1}
-          fadeDistance={2000}
-          position={[width / 2, 0, depth / 2]}
+          fadeDistance={Math.max(bounds.width, bounds.depth) * 1.5}
+          position={[bounds.centerX, 0, bounds.centerZ]}
         />
 
+        {/* FLOOR ELEMENTS */}
         {elements.map((el) => {
           const pos = el.position || {};
           const dim = el.dimensions || {};
@@ -387,7 +436,7 @@ const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
                 <lineBasicMaterial color="#334155" linewidth={1} />
               </lineSegments>
               <Html position={[0, elH / 2 + 10, 0]} center distanceFactor={800} occlude>
-                <div className="px-2 py-0.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-800 shadow">
+                <div className="px-2 py-0.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-800 shadow select-none">
                   {el.name}
                 </div>
               </Html>
@@ -395,13 +444,14 @@ const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
           );
         })}
 
+        {/* ORBIT CONTROLS CENTERED DYNAMICALLY */}
         <OrbitControls
           enableDamping
           dampingFactor={0.08}
           minDistance={100}
-          maxDistance={3500}
+          maxDistance={10000}
           maxPolarAngle={Math.PI / 2.05}
-          target={[width / 2, 0, depth / 2]}
+          target={[bounds.centerX, 0, bounds.centerZ]}
         />
       </Canvas>
 
@@ -668,7 +718,7 @@ const MapPage = () => {
               campusRoads={roads}
               campusElements={campusElements}
               onOpenBuilding={handleOpenBuilding}
-              hideLabels={Boolean(activeBuildingForFloors)} // Modal khulte hi 3D labels hide
+              hideLabels={Boolean(activeBuildingForFloors)}
             />
           ) : (
             <CampusMap
@@ -773,9 +823,7 @@ const MapPage = () => {
         </div>
       </div>
 
-      {/* =========================================================
-          SPECIFIC BUILDING FLOORS MODAL (CLEAN SOLID OVERLAY)
-      ========================================================= */}
+      {/* SPECIFIC BUILDING FLOORS MODAL */}
       {activeBuildingForFloors && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 p-4 select-none">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
