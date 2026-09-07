@@ -70,15 +70,13 @@ const EditorElement = ({
     dimensions.width || 100
   );
 
-  const height = Number(
-    dimensions.height || 25
-  );
+  const height = element.type === "corridor"
+    ? 12
+    : Number(dimensions.height || 25);
 
-  const depth = Number(
-    dimensions.depth ||
-      dimensions.height ||
-      80
-  );
+  const depth = element.type === "corridor"
+    ? Number(dimensions.height || 80)
+    : Number(dimensions.depth || dimensions.height || 80);
 
   const x = Number(
     position.x || 0

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
+import SearchableSelect from "../components/common/SearchableSelect";
 import { fetchBuildings } from "../redux/slices/buildingSlice";
 import { fetchRoads } from "../redux/slices/roadSlice";
 import { fetchCampusElements } from "../redux/slices/campusElementSlice";
@@ -553,6 +554,17 @@ const Directions = () => {
   const [to, setTo] = useState("");
   const [viewMode, setViewMode] = useState("2d");
 
+  const locationOptions = useMemo(
+    () =>
+      locations.map((location) => ({
+        value: location._id,
+        label: location.name,
+        description: [location.building, location.category].filter(Boolean).join(" • "),
+        searchText: `${location.name} ${location.building || ""} ${location.category || ""}`,
+      })),
+    [locations]
+  );
+
   useEffect(() => {
     if (!buildings.length) dispatch(fetchBuildings());
     if (!roads.length) dispatch(fetchRoads());
@@ -603,27 +615,7 @@ const Directions = () => {
       <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto] lg:items-end">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-              From
-            </label>
-            <div className="relative">
-              <MapPin
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
-              />
-              <select
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              >
-                <option value="">Select starting location</option>
-                {locations.map((location) => (
-                  <option key={location._id} value={location._id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect label="From" icon={MapPin} value={from} options={locationOptions} placeholder="Type a campus location..." onChange={setFrom} />
           </div>
 
           <button
@@ -635,27 +627,7 @@ const Directions = () => {
           </button>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-              To
-            </label>
-            <div className="relative">
-              <Navigation
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500"
-              />
-              <select
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              >
-                <option value="">Select destination</option>
-                {locations.map((location) => (
-                  <option key={location._id} value={location._id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect label="To" icon={Navigation} value={to} options={locationOptions} placeholder="Type a destination..." onChange={setTo} accent="red" />
           </div>
 
           <button

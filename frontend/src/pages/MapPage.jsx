@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -15,6 +14,7 @@ import {
   ChevronRight,
   Building2,
   ArrowLeft,
+  Route,
 } from "lucide-react";
 
 import {
@@ -33,6 +33,8 @@ import { fetchFloorsByBuilding, setCurrentFloor } from "../redux/slices/floorSli
 import { fetchMapElementsByFloor } from "../redux/slices/mapElementSlice";
 
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
+import IndoorDirectionsPanel from "../components/map/IndoorDirectionsPanel";
+import { getIndoorElementCenter } from "../utils/indoorRoute";
 
 /* =========================================================
    3D INLINE COMPONENTS (CAMPUS)
@@ -329,7 +331,71 @@ const CampusViewer3DInternal = ({
    3D FLOOR VIEWER (WITH DYNAMIC EXPANSION)
 ========================================================= */
 
-const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
+const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
+  const routeDots = useMemo(() => {
+    const dots = [];
+    const spacing = 28;
+
+    routePoints.slice(0, -1).forEach((start, index) => {
+      const end = routePoints[index + 1];
+      const startX = Number(start.x);
+      const startZ = Number(start.y);
+      const endX = Number(end.x);
+      const endZ = Number(end.y);
+      const distance = Math.hypot(endX - startX, endZ - startZ);
+      const dotCount = Math.max(2, Math.ceil(distance / spacing));
+
+      for (let dotIndex = 0; dotIndex < dotCount; dotIndex += 1) {
+        const progress = dotIndex / dotCount;
+        dots.push([
+          startX + (endX - startX) * progress,
+          28,
+          startZ + (endZ - startZ) * progress,
+        ]);
+      }
+    });
+
+    return dots;
+  }, [routePoints]);
+
+  const destinationPoint = destination ? getIndoorElementCenter(destination) : null;
+
+  return (
+    <>
+      {routeDots.map((position, index) => (
+        <mesh key={`indoor-route-dot-${index}`} position={position} renderOrder={1000}>
+          <sphereGeometry args={[6, 12, 12]} />
+          <meshBasicMaterial color="#2563EB" depthTest={false} />
+        </mesh>
+      ))}
+      {source && (
+        <Html position={[getIndoorElementCenter(source).x, 65, getIndoorElementCenter(source).y]} center distanceFactor={800}>
+          <div className="rounded-full border-2 border-white bg-blue-600 px-3 py-1 text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
+            START: {source.name}
+          </div>
+        </Html>
+      )}
+      {destinationPoint && (
+        <Html position={[destinationPoint.x, 65, destinationPoint.y]} center distanceFactor={800}>
+          <div className="rounded-full border-2 border-white bg-red-600 px-3 py-1 text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
+            DESTINATION: {destination.name}
+          </div>
+        </Html>
+      )}
+    </>
+  );
+};
+
+const Floor3DViewer = ({
+  building,
+  floor,
+  elements = [],
+  onBack,
+  routePoints = [],
+  routeSource,
+  routeDestination,
+  routeDirections = [],
+}) => {
   // Elements ke hisaab se floor boundaries calculate karein
   const bounds = useMemo(() => {
     const baseW = Number(floor?.width || 1200);
@@ -417,8 +483,10 @@ const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
           const pos = el.position || {};
           const dim = el.dimensions || {};
           const elW = Number(dim.width || 100);
-          const elH = Number(dim.height || 25);
-          const elD = Number(dim.depth || dim.height || 80);
+          const elH = el.type === "corridor" ? 12 : Number(dim.height || 25);
+          const elD = el.type === "corridor"
+            ? Number(dim.height || 80)
+            : Number(dim.depth || dim.height || 80);
 
           const posX = Number(pos.x || 0) + elW / 2;
           const posZ = Number(pos.y || 0) + elD / 2;
@@ -443,6 +511,12 @@ const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
             </group>
           );
         })}
+
+        <IndoorRoute3D
+          routePoints={routePoints}
+          source={routeSource}
+          destination={routeDestination}
+        />
 
         {/* ORBIT CONTROLS CENTERED DYNAMICALLY */}
         <OrbitControls
@@ -474,6 +548,25 @@ const Floor3DViewer = ({ building, floor, elements = [], onBack }) => {
       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-3 text-xs text-slate-600 shadow-xl pointer-events-none">
         🖱 Drag = Rotate Floor • 🔍 Scroll = Zoom • 🖱 Right Click = Pan
       </div>
+
+      {routeDirections.length > 0 && (
+        <div className="absolute right-4 top-4 z-10 max-h-[min(420px,calc(100%-2rem))] w-[min(340px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur">
+          <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Indoor route</p>
+          <div className="mt-3 space-y-3">
+            {routeDirections.map((direction) => (
+              <div key={`${direction.step}-${direction.to._id}`} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+                  {direction.step}
+                </span>
+                <p className="text-xs leading-5 text-slate-600">
+                  Go from <strong className="text-slate-800">{direction.from.name}</strong> to <strong className="text-slate-800">{direction.to.name}</strong>
+                  {direction.floorName ? ` on ${direction.floorName}` : ""}.
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -507,6 +600,8 @@ const MapPage = () => {
 
   const [activeBuildingForFloors, setActiveBuildingForFloors] = useState(null);
   const [selectedFloorForView, setSelectedFloorForView] = useState(null);
+  const [showIndoorDirections, setShowIndoorDirections] = useState(false);
+  const [indoorRoute, setIndoorRoute] = useState(null);
 
   const mapCanvasRef = useRef(null);
 
@@ -573,10 +668,24 @@ const MapPage = () => {
   };
 
   const handleSelectFloor = (floor) => {
+    setIndoorRoute(null);
     dispatch(setCurrentFloor(floor));
     dispatch(fetchMapElementsByFloor(floor._id));
     setSelectedFloorForView(floor);
     setActiveBuildingForFloors(null);
+  };
+
+  const handleIndoorRoute = (route) => {
+    const destinationFloor = floors.find((floor) => floor._id === route.floorId);
+
+    if (!destinationFloor) return;
+
+    setIndoorRoute(route);
+    setShowIndoorDirections(false);
+    setActiveBuildingForFloors(null);
+    dispatch(setCurrentFloor(destinationFloor));
+    dispatch(fetchMapElementsByFloor(destinationFloor._id));
+    setSelectedFloorForView(destinationFloor);
   };
 
   const clearSelection = () => {
@@ -710,6 +819,10 @@ const MapPage = () => {
               building={activeBuildingForFloors || buildings.find(b => b._id === selectedFloorForView.buildingId)}
               floor={selectedFloorForView}
               elements={floorMapElements}
+              routePoints={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.routePoints : []}
+              routeSource={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.source : null}
+              routeDestination={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.destination : null}
+              routeDirections={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.directions : []}
               onBack={() => setSelectedFloorForView(null)}
             />
           ) : viewMode === "3d" ? (
@@ -900,9 +1013,26 @@ const MapPage = () => {
               >
                 Close
               </button>
+              <button
+                type="button"
+                onClick={() => setShowIndoorDirections(true)}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <Route size={14} />
+                Indoor directions
+              </button>
             </div>
           </div>
         </div>
+      )}
+
+      {showIndoorDirections && activeBuildingForFloors && (
+        <IndoorDirectionsPanel
+          building={activeBuildingForFloors}
+          floors={floors}
+          onClose={() => setShowIndoorDirections(false)}
+          onRoute={handleIndoorRoute}
+        />
       )}
     </div>
   );
