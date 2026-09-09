@@ -3,8 +3,6 @@ import {
   Navigation,
   ArrowRight,
   GraduationCap,
-  Bell,
-  Headphones,
   BookOpen,
   Utensils,
   School,
@@ -17,105 +15,37 @@ import {
   Compass,
   ShieldCheck,
   Map,
-  Stethoscope,
-  HeartPulse,
-  Pill,
   Hospital,
-  Cog,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
-
-import { useRef } from "react";
 
 import universityImage from "../assets/university.png";
 import chairmanImage from "../assets/chairman.png";
 
 const Home = () => {
-  const courseScrollRef = useRef(null);
-  const quickScrollRef = useRef(null);
-
-  const academicShowcase = [
-    {
-      title: "Medical Sciences",
-      shortTitle: "MBBS",
-      description:
-        "Professional medical education with strong clinical learning and healthcare exposure.",
-      icon: Stethoscope,
-      badge: "Medical Education",
-      iconStyle: "bg-[#eaf4ff] text-[#0766e8]",
-      accent: "from-[#075cff] to-[#00a8ff]",
-    },
-    {
-      title: "Engineering",
-      shortTitle: "Engineering",
-      description:
-        "Technology, innovation and practical learning for future-ready engineering professionals.",
-      icon: Cog,
-      badge: "Technology & Innovation",
-      iconStyle: "bg-[#eef7ff] text-[#0878d1]",
-      accent: "from-[#0d5fff] to-[#16b5e8]",
-    },
-    {
-      title: "Nursing",
-      shortTitle: "Nursing",
-      description:
-        "Healthcare education focused on patient care, clinical skills and compassionate service.",
-      icon: HeartPulse,
-      badge: "Healthcare & Care",
-      iconStyle: "bg-[#fff0f4] text-[#e84a72]",
-      accent: "from-[#ef4b7b] to-[#ff7c9e]",
-    },
-    {
-      title: "Pharmacy",
-      shortTitle: "Pharmacy",
-      description:
-        "Pharmaceutical education with academic, laboratory and healthcare-oriented learning.",
-      icon: Pill,
-      badge: "Pharmaceutical Sciences",
-      iconStyle: "bg-[#f2efff] text-[#7654db]",
-      accent: "from-[#6c4ee6] to-[#9c71f0]",
-    },
-    {
-      title: "Teaching Hospital",
-      shortTitle: "Hospital",
-      description:
-        "A healthcare environment supporting treatment, clinical education and medical training.",
-      icon: Hospital,
-      badge: "Healthcare Services",
-      iconStyle: "bg-[#ecfbf3] text-[#0aa16b]",
-      accent: "from-[#0ca66a] to-[#2ed49d]",
-    },
-  ];
-
   const quickAccess = [
     {
       title: "Campus Map",
-      description: "Explore important places across campus",
+      badge: "Interactive 2D/3D View",
+      description:
+        "Explore academic departments, healthcare centers, lecture halls and campus facilities in real-time.",
       icon: MapPinned,
       href: "/map",
       iconStyle: "bg-[#edf4ff] text-[#0d60ff]",
+      tag: "Live Map",
+      tagColor: "bg-blue-50 text-blue-700 border-blue-200/70",
+      accentGlow: "from-blue-500/10 to-indigo-500/0",
     },
     {
       title: "Get Directions",
-      description: "Find the easiest route to your destination",
+      badge: "Smart Wayfinding",
+      description:
+        "Find the easiest walking route and turn-by-turn navigation directly to your destination.",
       icon: Navigation,
       href: "/directions",
       iconStyle: "bg-[#effaf6] text-[#08a66c]",
-    },
-    {
-      title: "Notices",
-      description: "Check important university announcements",
-      icon: Bell,
-      href: "/notices",
-      iconStyle: "bg-[#f4efff] text-[#7548ed]",
-    },
-    {
-      title: "Help Desk",
-      description: "Get support and campus assistance",
-      icon: Headphones,
-      href: "/contact",
-      iconStyle: "bg-[#fff4ec] text-[#f97316]",
+      tag: "Navigation",
+      tagColor: "bg-emerald-50 text-emerald-700 border-emerald-200/70",
+      accentGlow: "from-emerald-500/10 to-teal-500/0",
     },
   ];
 
@@ -146,30 +76,11 @@ const Home = () => {
     },
   ];
 
-  const scrollCourses = (direction) => {
-    if (!courseScrollRef.current) return;
-
-    courseScrollRef.current.scrollBy({
-      left: direction === "left" ? -340 : 340,
-      behavior: "smooth",
-    });
-  };
-
-  const scrollQuick = (direction) => {
-    if (!quickScrollRef.current) return;
-
-    quickScrollRef.current.scrollBy({
-      left: direction === "left" ? -330 : 330,
-      behavior: "smooth",
-    });
-  };
-
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f8fbff]">
       {/* ========================================================= */}
       {/* ANIMATION STYLES */}
       {/* ========================================================= */}
-
       <style>{`
         html {
           scroll-behavior: smooth;
@@ -246,15 +157,6 @@ const Home = () => {
           }
         }
 
-        @keyframes drift {
-          0%,100% {
-            transform: translate3d(0,0,0);
-          }
-          50% {
-            transform: translate3d(15px,-8px,0);
-          }
-        }
-
         .animate-fade-up {
           animation: fadeUp .8s ease-out both;
         }
@@ -277,19 +179,6 @@ const Home = () => {
 
         .animate-pulse-soft {
           animation: pulseSoft 5s ease-in-out infinite;
-        }
-
-        .animate-drift {
-          animation: drift 7s ease-in-out infinite;
-        }
-
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
         }
 
         .shine-effect::before {
@@ -324,9 +213,8 @@ const Home = () => {
       `}</style>
 
       {/* ========================================================= */}
-      {/* HERO */}
+      {/* HERO (100% ORIGINAL DESIGN & ELEMENTS PRESERVED) */}
       {/* ========================================================= */}
-
       <section className="relative min-h-[680px] overflow-hidden bg-[#03275f] lg:min-h-[720px]">
         <img
           src={universityImage}
@@ -338,9 +226,9 @@ const Home = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-[#001d4b]/92 via-transparent to-[#002c66]/32" />
 
         <div className="animate-pulse-soft absolute -left-32 top-20 h-[450px] w-[450px] rounded-full bg-blue-500/20 blur-[110px]" />
-
         <div className="animate-pulse-soft absolute right-0 top-0 h-[480px] w-[480px] rounded-full bg-cyan-400/15 blur-[120px]" />
 
+        {/* DOT GRID PATTERN */}
         <div
           className="absolute left-0 top-10 hidden h-[170px] w-[90px] opacity-30 lg:block"
           style={{
@@ -350,36 +238,34 @@ const Home = () => {
           }}
         />
 
+        {/* FLOATING LEAF 1 */}
         <div className="absolute -left-10 top-[140px] hidden rotate-[32deg] lg:block">
           <div className="animate-float h-14 w-28 rounded-[100%_0_100%_0] bg-gradient-to-br from-lime-300 to-green-600 opacity-80" />
         </div>
 
+        {/* FLOATING LEAF 2 */}
         <div className="absolute -right-8 top-[110px] hidden -rotate-[28deg] lg:block">
           <div className="animate-float h-12 w-24 rounded-[100%_0_100%_0] bg-gradient-to-br from-lime-300 to-green-600" />
         </div>
 
         <div className="relative z-10 mx-auto grid min-h-[680px] w-full max-w-[1600px] items-center gap-12 px-5 pb-28 pt-12 sm:px-8 md:pt-16 lg:grid-cols-[1fr_.9fr] lg:px-12 lg:pb-32 xl:px-16">
           {/* LEFT */}
-
           <div className="animate-fade-right w-full max-w-[700px]">
             <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white shadow-xl backdrop-blur-md sm:text-sm">
               <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,.9)]" />
-
               Smart Campus Navigation
             </div>
 
             <h1 className="text-[40px] font-extrabold leading-[1.08] tracking-[-1.5px] text-white sm:text-[50px] md:text-[58px] lg:text-[64px]">
               Navigate. Discover.
-
               <span className="mt-2 block bg-gradient-to-r from-[#00afff] via-[#00d7e8] to-[#66e386] bg-clip-text text-transparent">
                 Experience Campus
               </span>
             </h1>
 
             <p className="mt-7 w-full max-w-[650px] text-[15px] font-medium leading-7 text-white/90 sm:text-[17px]">
-              Explore academic areas, healthcare facilities and important
-              places across campus with our smart and interactive campus
-              navigation system.
+              Explore academic areas, healthcare facilities and important places
+              across campus with our smart and interactive campus navigation system.
             </p>
 
             <div className="mt-8 flex w-full flex-col gap-4 sm:flex-row">
@@ -388,9 +274,7 @@ const Home = () => {
                 className="group inline-flex min-h-[55px] items-center justify-center gap-3 rounded-xl bg-[#0e60ff] px-7 text-sm font-bold text-white shadow-[0_15px_35px_rgba(0,80,255,.35)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#004fe2]"
               >
                 <MapPinned size={19} />
-
                 Explore Campus Map
-
                 <ArrowRight
                   size={17}
                   className="transition-transform group-hover:translate-x-1"
@@ -402,14 +286,12 @@ const Home = () => {
                 className="group inline-flex min-h-[55px] items-center justify-center gap-3 rounded-xl border border-white/80 bg-white px-7 text-sm font-bold text-[#08234c] shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-blue-50"
               >
                 <Navigation size={19} className="text-[#153f86]" />
-
                 Get Directions
               </a>
             </div>
           </div>
 
           {/* RIGHT MAP PREVIEW */}
-
           <div className="animate-fade-left relative mx-auto w-full max-w-[550px] lg:ml-auto lg:mr-0">
             <div className="absolute -inset-5 rounded-[42px] bg-blue-400/15 blur-3xl" />
 
@@ -425,7 +307,6 @@ const Home = () => {
 
                 <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/95 px-4 py-2 text-[11px] font-bold text-[#17479d] shadow-lg backdrop-blur sm:left-5 sm:top-5 sm:text-xs">
                   <Box size={15} className="text-[#155cff]" />
-
                   Interactive Campus Map
                 </div>
 
@@ -500,7 +381,6 @@ const Home = () => {
                     className="group inline-flex shrink-0 items-center justify-center gap-3 rounded-xl bg-white px-6 py-3 text-sm font-bold text-[#153673] shadow-lg transition-all hover:-translate-y-1"
                   >
                     Open Map
-
                     <ArrowRight
                       size={17}
                       className="transition-transform group-hover:translate-x-1"
@@ -516,7 +396,6 @@ const Home = () => {
       {/* ========================================================= */}
       {/* STATS + CHAIRMAN */}
       {/* ========================================================= */}
-
       <section className="relative z-20 mx-auto -mt-16 w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
         <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
           <div className="animate-fade-up grid overflow-hidden rounded-[22px] border border-white/80 bg-white shadow-[0_18px_50px_rgba(11,47,95,.13)] sm:grid-cols-3">
@@ -547,178 +426,24 @@ const Home = () => {
       </section>
 
       {/* ========================================================= */}
-      {/* ACADEMIC SHOWCASE */}
+      {/* QUICK ACCESS (REMOVED NOTICE & HELPDESK -> PREMIUM 2-CARD ACTION) */}
       {/* ========================================================= */}
-      {/*}
-
-      <section className="relative overflow-hidden bg-[#f8fbff] pb-14 pt-16 sm:pt-20">
-        <div className="animate-drift absolute -left-20 top-16 h-[260px] w-[260px] rounded-full bg-blue-100/50 blur-3xl" />
-
-        <div className="animate-drift absolute -right-24 bottom-0 h-[280px] w-[280px] rounded-full bg-cyan-100/40 blur-3xl" />
-
-        <div className="relative mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
-          <div className="mb-8 flex items-end justify-between gap-5">
-            <div className="animate-fade-up">
-              <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#075cff]">
-                Academic & Healthcare Excellence
-              </p>
-
-              <h2 className="mt-2 text-[28px] font-extrabold tracking-tight text-[#071c44] sm:text-[36px]">
-                One Campus. Endless Possibilities.
-              </h2>
-
-              <p className="mt-3 max-w-[720px] text-sm leading-7 text-[#7185a2] sm:text-[15px]">
-                Discover major academic and healthcare areas across the
-                university campus.
-              </p>
-            </div>
-
-            <div className="hidden items-center gap-2 md:flex">
-              <button
-                type="button"
-                onClick={() => scrollCourses("left")}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#dfe8f4] bg-white text-[#173b6c] shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:text-blue-600 hover:shadow-md"
-              >
-                <ChevronLeft size={20} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => scrollCourses("right")}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#075cff] text-white shadow-[0_10px_25px_rgba(7,92,255,.2)] transition-all hover:-translate-y-1 hover:bg-[#004fdc]"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-
-          <div
-            ref={courseScrollRef}
-            className="scrollbar-hide flex snap-x snap-mandatory gap-5 overflow-x-auto pb-6 pt-2"
-          >
-            {academicShowcase.map((item, index) => {
-              const Icon = item.icon;
-
-              return (
-                <div
-                  key={item.title}
-                  className="animate-fade-up group relative min-w-[270px] snap-start overflow-hidden rounded-[24px] border border-[#e5ecf5] bg-white shadow-[0_12px_35px_rgba(20,55,100,.08)] transition-all duration-300 hover:-translate-y-2 hover:border-blue-200 hover:shadow-[0_22px_48px_rgba(20,55,100,.14)] sm:min-w-[320px] lg:min-w-[350px]"
-                  style={{
-                    animationDelay: `${index * 0.1}s`,
-                  }}
-                >
-                  <div
-                    className={`h-1.5 w-full bg-gradient-to-r ${item.accent}`}
-                  />
-
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div
-                        className={`flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[17px] ${item.iconStyle} transition-all duration-300 group-hover:scale-110`}
-                      >
-                        <Icon size={27} strokeWidth={1.9} />
-                      </div>
-
-                      <span className="rounded-full bg-[#f7f9fc] px-3 py-1.5 text-[10px] font-bold text-[#6d829f]">
-                        {item.badge}
-                      </span>
-                    </div>
-
-                    <p className="mt-7 text-[11px] font-extrabold uppercase tracking-[.12em] text-[#075cff]">
-                      {item.shortTitle}
-                    </p>
-
-                    <h3 className="mt-2 text-[22px] font-extrabold text-[#0a2148]">
-                      {item.title}
-                    </h3>
-
-                    <p className="mt-3 min-h-[72px] text-sm leading-6 text-[#7185a2]">
-                      {item.description}
-                    </p>
-
-                    <div className="mt-6 flex items-center justify-between border-t border-[#edf1f6] pt-5">
-                      <span className="text-xs font-semibold text-[#516987]">
-                        Explore Campus Area
-                      </span>
-
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3f7ff] text-[#075cff] transition-all duration-300 group-hover:bg-[#075cff] group-hover:text-white">
-                        <ArrowRight
-                          size={17}
-                          className="transition-transform group-hover:translate-x-0.5"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-2 flex justify-center gap-2 md:hidden">
-            <button
-              type="button"
-              onClick={() => scrollCourses("left")}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#dfe8f4] bg-white text-[#173b6c]"
-            >
-              <ChevronLeft size={18} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => scrollCourses("right")}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#075cff] text-white"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>*/}
-
-      {/* ========================================================= */}
-      {/* QUICK ACCESS */}
-      {/* ========================================================= */}
-
-      <section className="bg-white py-14 sm:py-18">
+      <section className="bg-white py-14 sm:py-20 border-b border-slate-100">
         <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
-          <div className="mb-7 flex items-end justify-between gap-5">
-            <div className="animate-fade-up">
-              <p className="text-[11px] font-extrabold uppercase tracking-[.12em] text-[#075cff]">
-                Quick Navigation
-              </p>
-
-              <h2 className="mt-2 text-[27px] font-extrabold tracking-tight text-[#071c44] sm:text-[34px]">
-                Everything You Need
-              </h2>
-
-              <p className="mt-2 max-w-[650px] text-sm leading-6 text-[#7185a2]">
-                Quickly access important campus navigation tools and useful
-                university information.
-              </p>
-            </div>
-
-            <div className="hidden gap-2 md:flex">
-              <button
-                type="button"
-                onClick={() => scrollQuick("left")}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e1e8f2] bg-white text-[#264566] transition hover:border-blue-200 hover:text-blue-600"
-              >
-                <ChevronLeft size={18} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => scrollQuick("right")}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#075cff] text-white transition hover:bg-[#004fdc]"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
+          <div className="mb-8">
+            <p className="text-[11px] font-extrabold uppercase tracking-[.12em] text-[#075cff]">
+              Quick Navigation
+            </p>
+            <h2 className="mt-2 text-[27px] font-extrabold tracking-tight text-[#071c44] sm:text-[34px]">
+              Everything You Need
+            </h2>
+            <p className="mt-2 max-w-[650px] text-sm leading-6 text-[#7185a2]">
+              Quickly access important campus navigation tools and useful university directions.
+            </p>
           </div>
 
-          <div
-            ref={quickScrollRef}
-            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 pt-1"
-          >
+          {/* 2-Column Responsive Card Grid */}
+          <div className="grid gap-5 sm:gap-6 md:grid-cols-2">
             {quickAccess.map((item, index) => {
               const Icon = item.icon;
 
@@ -726,33 +451,45 @@ const Home = () => {
                 <a
                   key={item.title}
                   href={item.href}
-                  className="animate-fade-up group relative min-w-[270px] snap-start overflow-hidden rounded-[20px] border border-[#e6edf7] bg-[#fbfdff] p-5 shadow-[0_10px_30px_rgba(20,55,100,.06)] transition-all duration-300 hover:-translate-y-2 hover:border-blue-200 hover:bg-white hover:shadow-[0_18px_40px_rgba(20,55,100,.12)] sm:min-w-[310px] lg:min-w-[340px]"
-                  style={{
-                    animationDelay: `${index * 0.12}s`,
-                  }}
+                  className="animate-fade-up group relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-[#e6edf7] bg-[#fbfdff] p-6 shadow-[0_10px_30px_rgba(20,55,100,.06)] transition-all duration-300 hover:-translate-y-1.5 hover:border-blue-300 hover:bg-white hover:shadow-[0_20px_45px_rgba(20,55,100,.12)] sm:p-8"
+                  style={{ animationDelay: `${index * 0.12}s` }}
                 >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[15px] ${item.iconStyle}`}
-                    >
-                      <Icon size={23} />
+                  <div
+                    className={`absolute -right-16 -top-16 h-44 w-44 rounded-full bg-gradient-to-br ${item.accentGlow} blur-2xl transition-transform group-hover:scale-125`}
+                  />
+
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between gap-3">
+                      <div
+                        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] transition-transform duration-300 group-hover:scale-105 ${item.iconStyle}`}
+                      >
+                        <Icon size={27} />
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-[11px] font-bold border ${item.tagColor}`}
+                      >
+                        {item.tag}
+                      </span>
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-[15px] font-extrabold text-[#10274e]">
+                    <div className="mt-6">
+                      <p className="text-xs font-bold text-[#075cff]">
+                        {item.badge}
+                      </p>
+                      <h3 className="mt-1 text-2xl font-extrabold text-[#10274e]">
                         {item.title}
                       </h3>
-
-                      <p className="mt-1 text-xs leading-5 text-[#7b8da8]">
+                      <p className="mt-2.5 text-sm leading-relaxed text-[#7b8da8]">
                         {item.description}
                       </p>
                     </div>
+                  </div>
 
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f8fd] text-[#075cff] transition-all duration-300 group-hover:bg-[#075cff] group-hover:text-white">
-                      <ArrowRight
-                        size={17}
-                        className="transition-transform group-hover:translate-x-0.5"
-                      />
+                  <div className="relative z-10 mt-8 flex items-center justify-between border-t border-[#edf1f6] pt-5 text-sm font-bold text-[#075cff] transition-colors group-hover:text-blue-700">
+                    <span>Open Now</span>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f5f8fd] text-[#075cff] transition-all duration-300 group-hover:translate-x-1 group-hover:bg-[#075cff] group-hover:text-white">
+                      <ArrowRight size={17} />
                     </div>
                   </div>
                 </a>
@@ -765,7 +502,6 @@ const Home = () => {
       {/* ========================================================= */}
       {/* SMART NAVIGATION */}
       {/* ========================================================= */}
-
       <section className="bg-[#f8fbff] py-14 sm:py-20">
         <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
           <div className="grid items-center gap-10 lg:grid-cols-[.95fr_1.05fr]">
@@ -800,7 +536,6 @@ const Home = () => {
                   className="group mt-7 inline-flex items-center gap-3 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-[#063879] shadow-lg transition-all duration-300 hover:-translate-y-1"
                 >
                   Start Navigation
-
                   <ArrowRight
                     size={17}
                     className="transition-transform group-hover:translate-x-1"
@@ -855,14 +590,9 @@ const Home = () => {
       {/* ========================================================= */}
       {/* FINAL CTA */}
       {/* ========================================================= */}
-
       <section className="bg-white py-14 sm:py-18">
         <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
           <div className="animate-fade-up relative overflow-hidden rounded-[28px] border border-[#dce8fa] bg-gradient-to-r from-[#eef5ff] via-white to-[#eefaff] px-6 py-10 text-center shadow-[0_15px_45px_rgba(20,55,100,.07)] sm:px-10 sm:py-14">
-            <div className="absolute left-[-70px] top-[-70px] h-[220px] w-[220px] rounded-full bg-blue-100/60 blur-3xl" />
-
-            <div className="absolute bottom-[-80px] right-[-50px] h-[240px] w-[240px] rounded-full bg-cyan-100/60 blur-3xl" />
-
             <div className="relative z-10 mx-auto max-w-[760px]">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#075cff] text-white shadow-[0_12px_30px_rgba(7,92,255,.25)]">
                 <MapPinned size={27} />
@@ -883,7 +613,6 @@ const Home = () => {
                   className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#075cff] px-7 py-3.5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(7,92,255,.22)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#004ee0]"
                 >
                   <MapPinned size={18} />
-
                   Explore Map
                 </a>
 
@@ -892,7 +621,6 @@ const Home = () => {
                   className="inline-flex items-center justify-center gap-3 rounded-xl border border-[#dce5f1] bg-white px-7 py-3.5 text-sm font-bold text-[#19375f] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200"
                 >
                   <Navigation size={18} />
-
                   Get Directions
                 </a>
               </div>
@@ -907,7 +635,6 @@ const Home = () => {
 /* ============================================================= */
 /* MAP MARKER */
 /* ============================================================= */
-
 const MapMarker = ({ className, icon, delay = "0s" }) => {
   return (
     <div
@@ -916,9 +643,7 @@ const MapMarker = ({ className, icon, delay = "0s" }) => {
     >
       <div className="relative">
         <div className="flex h-11 w-10 rotate-[-45deg] items-center justify-center rounded-[50%_50%_50%_8px] border-[3px] border-white bg-[#075cff] text-white shadow-[0_8px_18px_rgba(0,56,160,.4)] sm:h-12 sm:w-11">
-          <div className="rotate-[45deg]">
-            {icon}
-          </div>
+          <div className="rotate-[45deg]">{icon}</div>
         </div>
 
         <div className="absolute -bottom-2 left-1/2 h-2 w-7 -translate-x-1/2 rounded-full bg-[#17315f]/25 blur-[2px]" />
@@ -930,7 +655,6 @@ const MapMarker = ({ className, icon, delay = "0s" }) => {
 /* ============================================================= */
 /* STAT CARD */
 /* ============================================================= */
-
 const StatCard = ({ icon: Icon, value, label, description }) => {
   return (
     <div className="group relative flex min-h-[135px] items-center gap-4 border-b border-[#edf1f6] px-5 py-5 transition-colors hover:bg-[#f9fbff] sm:border-b-0 sm:border-r sm:last:border-r-0 md:px-6">
@@ -958,7 +682,6 @@ const StatCard = ({ icon: Icon, value, label, description }) => {
 /* ============================================================= */
 /* CHAIRMAN CARD */
 /* ============================================================= */
-
 const ChairmanCard = ({ chairmanImage }) => {
   return (
     <div className="animate-fade-up relative min-h-[190px] overflow-hidden rounded-[22px] border border-white/80 bg-white shadow-[0_18px_50px_rgba(11,47,95,.13)]">

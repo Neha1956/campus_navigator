@@ -1,23 +1,13 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
 import * as THREE from "three";
 import {
-  MapPin,
   Building2,
-  Car,
-  Trees,
-  Dumbbell,
-  DoorOpen,
   MousePointer2,
   Plus,
   Minus,
   RotateCcw,
-  Waves,
-  DoorClosed,
-  Boxes,
-  Map as MapIcon,
-  Layers,
 } from "lucide-react";
 
 import BuildingRenderer from "./BuildingRenderer";
@@ -79,7 +69,7 @@ const safeNumber = (value, fallback = 0) => {
 };
 
 /* =========================================================
-   3D DRAGGABLE WRAPPER (FIXED STATE SNAPBACK BUG)
+   3D DRAGGABLE WRAPPER
 ========================================================= */
 
 const DraggableObject3D = ({
@@ -218,8 +208,7 @@ const Building3D = ({
                 }}
                 className="flex items-center gap-1 text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded shadow hover:bg-blue-700"
               >
-                <Layers size={11} />
-                Open Floors
+                <span>Open Floors</span>
               </button>
             )}
           </div>
@@ -369,7 +358,7 @@ const CampusViewer3DCanvas = ({
   const [orbitEnabled, setOrbitEnabled] = useState(true);
 
   return (
-    <div className="absolute inset-0 w-full h-full min-h-[600px] bg-slate-950">
+    <div className="absolute inset-0 w-full h-full min-h-[380px] sm:min-h-[500px] lg:min-h-[600px] bg-slate-950">
       <Canvas
         shadows
         camera={{
@@ -457,13 +446,13 @@ const CampusViewer3DCanvas = ({
         />
       </Canvas>
 
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-2.5 text-[11px] text-slate-600 shadow-xl pointer-events-none">
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-[10px] sm:text-[11px] text-slate-600 shadow-xl pointer-events-none">
         {CAMPUS_ELEMENT_TYPES.includes(activeTool) ? (
           <span className="text-blue-600 font-bold">
             🖱 Click Ground to place {activeTool} in 3D
           </span>
         ) : (
-          "🖱 Drag items = Move in 3D • 🖱 Orbit = Rotate view"
+          "🖱 Drag = Move • 🖱 Orbit = Rotate"
         )}
       </div>
     </div>
@@ -957,10 +946,10 @@ const CampusMap = ({
 
   const getToolMessage = () => {
     if (CAMPUS_ELEMENT_TYPES.includes(activeTool)) {
-      return `Click anywhere on the map to place ${activeTool}`;
+      return `Click anywhere on map to place ${activeTool}`;
     }
     if (activeTool === "select") {
-      return "Select, move, resize or edit an object";
+      return "Select, move, resize or edit";
     }
     return "";
   };
@@ -970,19 +959,19 @@ const CampusMap = ({
       ref={wrapperRef}
       className={
         fitToContainer
-          ? "relative h-full w-full min-h-[600px]"
-          : "relative min-w-max min-h-[600px]"
+          ? "relative h-full w-full min-h-[380px] sm:min-h-[500px]"
+          : "relative min-w-max min-h-[380px] sm:min-h-[500px]"
       }
     >
       {!readOnly && !is3D && getToolMessage() && (
-        <div className="absolute top-4 left-4 z-[2000] inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
-          <MousePointer2 size={16} />
-          {getToolMessage()}
+        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-[2000] inline-flex items-center gap-1.5 rounded-lg bg-slate-900/90 backdrop-blur px-3 py-1.5 text-xs text-white shadow-lg pointer-events-none">
+          <MousePointer2 size={14} />
+          <span>{getToolMessage()}</span>
         </div>
       )}
 
       {is3D ? (
-        <div className="relative w-full h-full min-h-[600px] overflow-hidden rounded-2xl border border-slate-300 shadow-xl bg-slate-950">
+        <div className="relative w-full h-full min-h-[380px] sm:min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-2xl border border-slate-300 shadow-xl bg-slate-950">
           <CampusViewer3DCanvas
             buildings={buildings}
             campusElements={campusElements}
@@ -1012,8 +1001,8 @@ const CampusMap = ({
           onWheel={fitToContainer ? handleMapWheel : undefined}
           className={
             fitToContainer
-              ? "relative h-full w-full min-h-[600px] overflow-auto rounded-2xl border border-slate-300 bg-slate-100 shadow-xl"
-              : "relative rounded-2xl border border-slate-300 bg-white shadow-xl overflow-auto"
+              ? "relative h-full w-full min-h-[380px] sm:min-h-[500px] overflow-auto rounded-2xl border border-slate-300 bg-slate-100 shadow-xl custom-scrollbar"
+              : "relative rounded-2xl border border-slate-300 bg-white shadow-xl overflow-auto custom-scrollbar"
           }
           style={
             fitToContainer
@@ -1498,18 +1487,19 @@ const CampusMap = ({
         </div>
       )}
 
+      {/* RESPONSIVE ZOOM CONTROLS */}
       {fitToContainer && !is3D && (
-        <div className="absolute right-4 top-4 z-[2500] flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+        <div className="absolute right-2.5 top-2.5 sm:right-4 sm:top-4 z-[2500] flex items-center gap-0.5 sm:gap-1 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-1 sm:p-1.5 shadow-lg">
           <button
             type="button"
             onClick={zoomOut}
             disabled={zoom <= MIN_ZOOM}
             title="Zoom out"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Minus size={18} />
+            <Minus size={15} />
           </button>
-          <div className="min-w-[55px] px-1 text-center text-xs font-semibold text-slate-600">
+          <div className="min-w-[45px] sm:min-w-[50px] px-1 text-center text-[11px] sm:text-xs font-semibold text-slate-600">
             {Math.round(zoom * 100)}%
           </div>
           <button
@@ -1517,23 +1507,23 @@ const CampusMap = ({
             onClick={zoomIn}
             disabled={zoom >= MAX_ZOOM}
             title="Zoom in"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Plus size={18} />
+            <Plus size={15} />
           </button>
           <button
             type="button"
             onClick={resetZoom}
             title="Reset zoom"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={14} />
           </button>
         </div>
       )}
 
       {!readOnly && !is3D && (
-        <div className="pointer-events-none absolute bottom-4 right-4 z-[2000] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-600 shadow-md backdrop-blur">
+        <div className="pointer-events-none hidden sm:block absolute bottom-4 right-4 z-[2000] rounded-lg border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-md backdrop-blur">
           Canvas: {mapWidth} × {mapHeight}
         </div>
       )}

@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
-/* =========================================================
-   REDUX - CAMPUS ELEMENT
-========================================================= */
+import { PanelLeft, SlidersHorizontal, Save, CheckCircle2 } from "lucide-react";
 
 import {
   fetchCampusElements,
@@ -11,10 +8,6 @@ import {
   updateCampusElement,
   deleteCampusElement,
 } from "../../redux/slices/campusElementSlice";
-
-/* =========================================================
-   REDUX - BUILDING
-========================================================= */
 
 import {
   fetchBuildings,
@@ -24,20 +17,12 @@ import {
   setCurrentBuilding,
 } from "../../redux/slices/buildingSlice";
 
-/* =========================================================
-   REDUX - FLOOR
-========================================================= */
-
 import {
   fetchFloorsByBuilding,
   createFloor,
   deleteFloor,
   setCurrentFloor,
 } from "../../redux/slices/floorSlice";
-
-/* =========================================================
-   REDUX - FLOOR MAP ELEMENT
-========================================================= */
 
 import {
   fetchMapElementsByFloor,
@@ -48,20 +33,12 @@ import {
   deleteMapElement,
 } from "../../redux/slices/mapElementSlice";
 
-/* =========================================================
-   REDUX - ROAD
-========================================================= */
-
 import {
   fetchRoads,
   createRoad,
   updateRoad,
   deleteRoad,
 } from "../../redux/slices/roadSlice";
-
-/* =========================================================
-   COMPONENTS
-========================================================= */
 
 import CampusHeader from "../../components/AdminCampusBuilder/CampusHeader";
 import CampusMap from "../../components/AdminCampusBuilder/CampusMap";
@@ -74,18 +51,9 @@ import PropertiesPanel from "../../components/AdminCampusBuilder/PropertiesPanel
 import LoadingOverlay from "../../components/AdminCampusBuilder/LoadingOverlay";
 import RoadModal from "../../components/AdminCampusBuilder/RoadModal";
 
-/* =========================================================
-   CONSTANTS
-========================================================= */
-
 const DEFAULT_CAMPUS_WIDTH = 1400;
 const DEFAULT_CAMPUS_HEIGHT = 900;
-
 const GRID_SIZE = 20;
-
-/* =========================================================
-   CAMPUS ELEMENT TYPES
-========================================================= */
 
 const CAMPUS_ELEMENT_TYPES = [
   "parking",
@@ -96,21 +64,10 @@ const CAMPUS_ELEMENT_TYPES = [
   "pond",
 ];
 
-/* =========================================================
-   LOCAL-DRAFT HELPERS
-========================================================= */
-
 const mergePatch = (base, patch) => {
   const next = { ...base, ...patch };
-
-  if (patch.position) {
-    next.position = { ...(base.position || {}), ...patch.position };
-  }
-
-  if (patch.dimensions) {
-    next.dimensions = { ...(base.dimensions || {}), ...patch.dimensions };
-  }
-
+  if (patch.position) next.position = { ...(base.position || {}), ...patch.position };
+  if (patch.dimensions) next.dimensions = { ...(base.dimensions || {}), ...patch.dimensions };
   return next;
 };
 
@@ -120,26 +77,14 @@ const applyPending = (entity, pendingMap) => {
   return mergePatch(entity, patch);
 };
 
-/* =========================================================
-   COMPONENT
-========================================================= */
-
 const AdminCampusBuilder = () => {
   const dispatch = useDispatch();
-
-  /* =======================================================
-     REDUX STATE
-  ======================================================= */
 
   const buildingState = useSelector((state) => state.buildings || {});
   const floorState = useSelector((state) => state.floors || {});
   const elementState = useSelector((state) => state.mapElements || {});
   const campusElementState = useSelector((state) => state.campusElements || {});
   const roadState = useSelector((state) => state.roads || {});
-
-  /* =======================================================
-     RAW DATA
-  ======================================================= */
 
   const rawBuildings = buildingState.buildings || [];
   const buildingLoading = buildingState.loading || false;
@@ -158,10 +103,6 @@ const AdminCampusBuilder = () => {
   const rawRoads = roadState.roads || [];
   const roadLoading = roadState.loading || false;
 
-  /* =======================================================
-     LOCAL (UNSAVED) EDITS
-  ======================================================= */
-
   const [buildingDrafts, setBuildingDrafts] = useState({});
   const [roadDrafts, setRoadDrafts] = useState({});
   const [campusElementDrafts, setCampusElementDrafts] = useState({});
@@ -169,50 +110,33 @@ const AdminCampusBuilder = () => {
 
   const [savingMap, setSavingMap] = useState(false);
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobilePropertiesOpen, setMobilePropertiesOpen] = useState(false);
+
   const hasUnsavedChanges =
     Object.keys(buildingDrafts).length > 0 ||
     Object.keys(roadDrafts).length > 0 ||
     Object.keys(campusElementDrafts).length > 0 ||
     Object.keys(floorElementDrafts).length > 0;
 
-  /* =======================================================
-     MERGED DATA
-  ======================================================= */
-
   const buildings = rawBuildings.map((b) => applyPending(b, buildingDrafts));
   const campusRoads = rawRoads.map((r) => applyPending(r, roadDrafts));
   const campusElements = rawCampusElements.map((e) => applyPending(e, campusElementDrafts));
   const renderedElements = rawElements.map((e) => applyPending(e, floorElementDrafts));
 
-  /* =======================================================
-     MAIN EDITOR STATE
-  ======================================================= */
-
   const [editorMode, setEditorMode] = useState("campus");
-  const [mapView, setMapView] = useState("2d"); // 2D by default for precise editing
+  const [mapView, setMapView] = useState("2d");
   const [showGrid, setShowGrid] = useState(true);
   const [activeTool, setActiveTool] = useState("select");
-
-  /* =======================================================
-     SELECTION STATE
-  ======================================================= */
 
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [selectedRoad, setSelectedRoad] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedCampusElement, setSelectedCampusElement] = useState(null);
 
-  /* =======================================================
-     MODALS
-  ======================================================= */
-
   const [showBuildingModal, setShowBuildingModal] = useState(false);
   const [showFloorModal, setShowFloorModal] = useState(false);
   const [showRoadModal, setShowRoadModal] = useState(false);
-
-  /* =======================================================
-     BUILDING FORM
-  ======================================================= */
 
   const [buildingForm, setBuildingForm] = useState({
     name: "",
@@ -225,10 +149,6 @@ const AdminCampusBuilder = () => {
     color: "#BFDBFE",
   });
 
-  /* =======================================================
-     FLOOR FORM
-  ======================================================= */
-
   const [floorForm, setFloorForm] = useState({
     name: "",
     floorNumber: 0,
@@ -237,10 +157,6 @@ const AdminCampusBuilder = () => {
     heightZ: 4,
     description: "",
   });
-
-  /* =======================================================
-     ROAD FORM
-  ======================================================= */
 
   const [roadForm, setRoadForm] = useState({
     name: "",
@@ -254,25 +170,12 @@ const AdminCampusBuilder = () => {
     walkingTime: 0,
   });
 
-  /* =======================================================
-     REFS
-  ======================================================= */
-
   const campusCanvasRef = useRef(null);
   const floorCanvasRef = useRef(null);
 
-  /* =======================================================
-     FLOOR DIMENSIONS
-  ======================================================= */
-
   const floorWidth = Number(currentFloor?.width || floorForm.width || 1000);
   const floorHeight = Number(currentFloor?.height || floorForm.height || 700);
-
   const [locationSaving, setLocationSaving] = useState(false);
-
-  /* =======================================================
-     LOAD INITIAL DATA
-  ======================================================= */
 
   useEffect(() => {
     dispatch(fetchBuildings());
@@ -327,10 +230,6 @@ const AdminCampusBuilder = () => {
       'You have unsaved changes on the map. Continue and lose them? Click Cancel and press "Save Map" first if you want to keep them.'
     );
   };
-
-  /* =======================================================
-     SAVE MAP
-  ======================================================= */
 
   const handleSaveMap = async () => {
     if (!hasUnsavedChanges || savingMap) return;
@@ -403,10 +302,6 @@ const AdminCampusBuilder = () => {
     }
   };
 
-  /* =======================================================
-     FLOOR ELEMENT ACTIONS
-  ======================================================= */
-
   const handleElementMove = (element, newX, newY) => {
     if (!element?._id) return;
     const x = Math.round(newX);
@@ -444,10 +339,6 @@ const AdminCampusBuilder = () => {
   const handleElementResizeEnd = (element, newWidth, newHeight) => {
     handleElementResize(element, newWidth, newHeight);
   };
-
-  /* =======================================================
-     BUILDING SELECT / ROTATE / DELETE
-  ======================================================= */
 
   const handleBuildingSelect = (building) => {
     if (!building) return;
@@ -595,13 +486,8 @@ const AdminCampusBuilder = () => {
     );
   };
 
-  /* =======================================================
-     CREATE CAMPUS ELEMENT (SUPPORTS 2D & 3D CLICK)
-  ======================================================= */
-
   const handleCreateCampusElement = async (data) => {
     if (!data) return;
-
     try {
       await dispatch(createCampusElement(data)).unwrap();
       await dispatch(fetchCampusElements());
@@ -637,7 +523,6 @@ const AdminCampusBuilder = () => {
     const snappedX = Math.max(0, snapToGrid(targetX));
     const snappedY = Math.max(0, snapToGrid(targetY));
 
-    // Agar activeTool "road" hai toh direct road create karein bina buildings requirement ke
     if (activeTool === "road") {
       const newRoadData = {
         name: "Campus Pathway",
@@ -688,18 +573,10 @@ const AdminCampusBuilder = () => {
     const size = dimensions[activeTool] || dimensions["small-room"];
 
     const data = {
-      name: activeTool.replace("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
+      name: activeTool.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase()),
       type: activeTool,
-      position: {
-        x: snappedX,
-        y: snappedY,
-        z: 0,
-      },
-      dimensions: {
-        width: size.width,
-        height: size.height,
-        depth: size.height,
-      },
+      position: { x: snappedX, y: snappedY, z: 0 },
+      dimensions: { width: size.width, height: size.height, depth: size.height },
       color: defaultColors[activeTool] || "#CBD5E1",
       strokeColor: strokeColors[activeTool] || "#334155",
       strokeWidth: 2,
@@ -787,10 +664,6 @@ const AdminCampusBuilder = () => {
     }
   };
 
-  /* =======================================================
-     ROAD ACTIONS
-  ======================================================= */
-
   const handleCreateRoad = async () => {
     if (!roadForm.name.trim()) {
       alert("Please enter road name");
@@ -806,13 +679,9 @@ const AdminCampusBuilder = () => {
       const fromBuilding = buildings.find((b) => b._id === roadForm.fromBuilding);
       const toBuilding = buildings.find((b) => b._id === roadForm.toBuilding);
       if (fromBuilding && toBuilding) {
-        const fromX = Number(fromBuilding.position?.x ?? fromBuilding.x ?? 0);
-        const fromY = Number(fromBuilding.position?.y ?? fromBuilding.y ?? 0);
-        const toX = Number(toBuilding.position?.x ?? toBuilding.x ?? 0);
-        const toY = Number(toBuilding.position?.y ?? toBuilding.y ?? 0);
         defaultPoints = [
-          { x: fromX, y: fromY },
-          { x: toX, y: toY },
+          { x: Number(fromBuilding.position?.x || 0), y: Number(fromBuilding.position?.y || 0) },
+          { x: Number(toBuilding.position?.x || 0), y: Number(toBuilding.position?.y || 0) },
         ];
       }
     }
@@ -925,10 +794,6 @@ const AdminCampusBuilder = () => {
       alert(error?.message || "Failed to delete road");
     }
   };
-
-  /* =======================================================
-     FLOOR LEVEL ACTIONS
-  ======================================================= */
 
   const handleCreateFloor = async () => {
     if (!currentBuilding?._id) {
@@ -1144,8 +1009,12 @@ const AdminCampusBuilder = () => {
   const isLoading =
     buildingLoading || floorLoading || elementLoading || campusElementLoading || roadLoading;
 
+  const hasAnySelection = Boolean(
+    selectedBuilding || selectedRoad || selectedElement || selectedCampusElement
+  );
+
   return (
-    <div className="relative h-screen bg-slate-100 flex flex-col overflow-hidden">
+    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-slate-900 font-sans">
       <CampusHeader
         editorMode={editorMode}
         mapView={mapView}
@@ -1157,9 +1026,21 @@ const AdminCampusBuilder = () => {
         roadsCount={campusRoads.length}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* LEFT SIDEBAR */}
-        <aside className="w-72 shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* MOBILE SIDEBAR BACKDROP */}
+        {mobileSidebarOpen && (
+          <div
+            onClick={() => setMobileSidebarOpen(false)}
+            className="fixed inset-0 z-[110] bg-slate-950/60 backdrop-blur-sm lg:hidden"
+          />
+        )}
+
+        {/* LEFT DRAWER / DESKTOP SIDEBAR */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-[120] w-80 max-w-[85vw] transform border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:w-72 lg:translate-x-0 xl:w-80 ${
+            mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
           {editorMode === "campus" && (
             <CampusSidebar
               buildings={buildings}
@@ -1169,9 +1050,16 @@ const AdminCampusBuilder = () => {
               setActiveTool={setActiveTool}
               setShowBuildingModal={setShowBuildingModal}
               setShowRoadModal={setShowRoadModal}
-              handleBuildingSelect={handleBuildingSelect}
-              handleOpenBuilding={handleOpenBuilding}
+              handleBuildingSelect={(b) => {
+                handleBuildingSelect(b);
+                setMobileSidebarOpen(false);
+              }}
+              handleOpenBuilding={(b) => {
+                handleOpenBuilding(b);
+                setMobileSidebarOpen(false);
+              }}
               handleBuildingRotation={handleBuildingRotation}
+              onCloseMobile={() => setMobileSidebarOpen(false)}
             />
           )}
 
@@ -1182,125 +1070,185 @@ const AdminCampusBuilder = () => {
               currentFloor={currentFloor}
               setShowFloorModal={setShowFloorModal}
               handleBackToCampus={handleBackToCampus}
-              handleFloorSelect={handleFloorSelect}
+              handleFloorSelect={(f) => {
+                handleFloorSelect(f);
+                setMobileSidebarOpen(false);
+              }}
               activeTool={activeTool}
               setActiveTool={setActiveTool}
               handleDeleteFloor={handleDeleteFloor}
+              onCloseMobile={() => setMobileSidebarOpen(false)}
             />
           )}
         </aside>
 
-        {/* CENTER MAIN */}
-        <main className="relative flex-1 bg-slate-200 overflow-auto p-4">
-          <div className="sticky top-0 z-[2500] mb-3 flex justify-end">
-            <button
-              type="button"
-              onClick={handleSaveMap}
-              disabled={!hasUnsavedChanges || savingMap}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-lg transition ${
-                !hasUnsavedChanges
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                  : savingMap
-                  ? "bg-blue-400 text-white cursor-wait"
-                  : "bg-emerald-600 text-white hover:bg-emerald-700"
-              }`}
-            >
-              {savingMap
-                ? "Saving..."
-                : hasUnsavedChanges
-                ? "Save Map (unsaved changes)"
-                : "Save Map"}
-            </button>
+        {/* MAIN CANVAS VIEWPORT */}
+        <main className="relative flex flex-1 flex-col overflow-hidden bg-slate-100">
+          {/* TOP CONTROLS BAR */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[100] flex items-center justify-between p-2.5 sm:p-4">
+            <div className="pointer-events-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white/95 px-3 py-2 text-xs font-bold text-slate-800 shadow-md backdrop-blur transition hover:bg-slate-50 active:scale-95 lg:hidden"
+              >
+                <PanelLeft size={16} className="text-blue-600" />
+                <span>Tools</span>
+              </button>
+
+              {hasAnySelection && (
+                <button
+                  type="button"
+                  onClick={() => setMobilePropertiesOpen(true)}
+                  className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/95 px-3 py-2 text-xs font-bold text-blue-700 shadow-md backdrop-blur transition hover:bg-blue-100 active:scale-95 lg:hidden"
+                >
+                  <SlidersHorizontal size={16} />
+                  <span>Properties</span>
+                </button>
+              )}
+            </div>
+
+            <div className="pointer-events-auto ml-auto">
+              <button
+                type="button"
+                onClick={handleSaveMap}
+                disabled={!hasUnsavedChanges || savingMap}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-md transition active:scale-95 sm:px-4 sm:py-2 sm:text-sm ${
+                  !hasUnsavedChanges
+                    ? "cursor-not-allowed border border-slate-200 bg-white/80 text-slate-400 backdrop-blur"
+                    : savingMap
+                    ? "cursor-wait bg-blue-600 text-white"
+                    : "bg-emerald-600 text-white shadow-emerald-600/30 hover:bg-emerald-700"
+                }`}
+              >
+                {savingMap ? (
+                  <>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Saving...</span>
+                  </>
+                ) : hasUnsavedChanges ? (
+                  <>
+                    <Save size={15} />
+                    <span className="hidden sm:inline">Save Changes</span>
+                    <span className="sm:hidden">Save</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} className="text-slate-400" />
+                    <span className="hidden sm:inline">All Saved</span>
+                    <span className="sm:hidden">Saved</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          {editorMode === "campus" && (
-            <CampusMap
-              campusCanvasRef={campusCanvasRef}
-              campusWidth={DEFAULT_CAMPUS_WIDTH}
-              campusHeight={DEFAULT_CAMPUS_HEIGHT}
-              showGrid={showGrid}
-              mapView={mapView}
-              activeTool={activeTool}
-              buildings={buildings}
-              campusRoads={campusRoads}
-              campusElements={campusElements}
-              selectedBuilding={selectedBuilding}
-              selectedRoad={selectedRoad}
-              selectedCampusElement={selectedCampusElement}
-              createCampusRoad={createCampusRoad}
-              handleCampusCanvasClick={handleCampusCanvasClick}
-              handleBuildingDragEnd={handleBuildingDragEnd}
-              handleDeleteBuilding={handleDeleteBuilding}
-              handleBuildingSelect={handleBuildingSelect}
-              handleOpenBuilding={handleOpenBuilding}
-              handleCampusElementSelect={handleCampusElementSelect}
-              handleCampusElementDragEnd={handleCampusElementDragEnd}
-              handleCampusElementResizeEnd={handleCampusElementResizeEnd}
-              handleRoadDragEnd={handleRoadDragEnd}
-              handleRoadClick={handleRoadClick}
-              setSelectedBuilding={setSelectedBuilding}
-              setSelectedRoad={setSelectedRoad}
-              setSelectedElement={setSelectedElement}
-              setSelectedCampusElement={setSelectedCampusElement}
-              fitToContainer={true}
-              showOpenFloorsOn3D={false}
-            />
-          )}
+          {/* CANVAS MOUNT WITH TOP CLEARANCE */}
+          <div className="relative flex-1 overflow-auto p-2 pt-14 sm:p-4 sm:pt-16 custom-scrollbar">
+            {editorMode === "campus" && (
+              <CampusMap
+                campusCanvasRef={campusCanvasRef}
+                campusWidth={DEFAULT_CAMPUS_WIDTH}
+                campusHeight={DEFAULT_CAMPUS_HEIGHT}
+                showGrid={showGrid}
+                mapView={mapView}
+                activeTool={activeTool}
+                buildings={buildings}
+                campusRoads={campusRoads}
+                campusElements={campusElements}
+                selectedBuilding={selectedBuilding}
+                selectedRoad={selectedRoad}
+                selectedCampusElement={selectedCampusElement}
+                createCampusRoad={createCampusRoad}
+                handleCampusCanvasClick={handleCampusCanvasClick}
+                handleBuildingDragEnd={handleBuildingDragEnd}
+                handleDeleteBuilding={handleDeleteBuilding}
+                handleBuildingSelect={handleBuildingSelect}
+                handleOpenBuilding={handleOpenBuilding}
+                handleCampusElementSelect={handleCampusElementSelect}
+                handleCampusElementDragEnd={handleCampusElementDragEnd}
+                handleCampusElementResizeEnd={handleCampusElementResizeEnd}
+                handleRoadDragEnd={handleRoadDragEnd}
+                handleRoadClick={handleRoadClick}
+                setSelectedBuilding={setSelectedBuilding}
+                setSelectedRoad={setSelectedRoad}
+                setSelectedElement={setSelectedElement}
+                setSelectedCampusElement={setSelectedCampusElement}
+                fitToContainer={true}
+                showOpenFloorsOn3D={false}
+              />
+            )}
 
-          {editorMode === "floor" && (
-            <FloorMap
-              currentFloor={currentFloor}
-              currentBuilding={currentBuilding}
-              elements={renderedElements}
-              floorCanvasRef={floorCanvasRef}
-              floorWidth={floorWidth}
-              floorHeight={floorHeight}
-              showGrid={showGrid}
-              mapView={mapView}
-              activeTool={activeTool}
-              selectedElement={selectedElement}
-              handleCanvasClick={handleCanvasClick}
-              handleDragEnd={handleDragEnd}
-              handleElementClick={handleElementClick}
-              setSelectedElement={setSelectedElement}
-              handleElementMove={handleElementMove}
-              handleElementMoveEnd={handleElementMoveEnd}
-              handleElementResize={handleElementResize}
-              handleElementResizeEnd={handleElementResizeEnd}
-            />
-          )}
+            {editorMode === "floor" && (
+              <FloorMap
+                currentFloor={currentFloor}
+                currentBuilding={currentBuilding}
+                elements={renderedElements}
+                floorCanvasRef={floorCanvasRef}
+                floorWidth={floorWidth}
+                floorHeight={floorHeight}
+                showGrid={showGrid}
+                mapView={mapView}
+                activeTool={activeTool}
+                selectedElement={selectedElement}
+                handleCanvasClick={handleCanvasClick}
+                handleDragEnd={handleDragEnd}
+                handleElementClick={handleElementClick}
+                setSelectedElement={setSelectedElement}
+                handleElementMove={handleElementMove}
+                handleElementMoveEnd={handleElementMoveEnd}
+                handleElementResize={handleElementResize}
+                handleElementResizeEnd={handleElementResizeEnd}
+              />
+            )}
+          </div>
         </main>
 
-        {/* RIGHT PROPERTIES PANEL */}
-        <PropertiesPanel
-          editorMode={editorMode}
-          selectedBuilding={selectedBuilding}
-          selectedRoad={selectedRoad}
-          selectedElement={selectedElement}
-          selectedCampusElement={selectedCampusElement}
-          handleBuildingSelect={handleBuildingSelect}
-          updateRoad={handleUpdateRoad}
-          deleteRoad={handleDeleteRoad}
-          handlePropertyChange={handlePropertyChange}
-          handlePositionChange={handlePositionChange}
-          handleDimensionChange={handleDimensionChange}
-          rotateElement={rotateElement}
-          saveSelectedElement={saveSelectedElement}
-          handleAddAsLocation={handleAddAsLocation}
-          handleDeleteElement={handleDeleteElement}
-          locationSaving={locationSaving}
-          handleDeleteBuilding={handleDeleteBuilding}
-          handleBuildingPropertyChange={handleBuildingPropertyChange}
-          handleBuildingPositionChange={handleBuildingPositionChange}
-          handleBuildingDimensionChange={handleBuildingDimensionChange}
-          handleCampusElementPropertyChange={handleCampusElementPropertyChange}
-          handleCampusElementPositionChange={handleCampusElementPositionChange}
-          handleCampusElementDimensionChange={handleCampusElementDimensionChange}
-          handleDeleteCampusElement={handleDeleteCampusElement}
-        />
+        {/* MOBILE PROPERTIES BACKDROP */}
+        {mobilePropertiesOpen && (
+          <div
+            onClick={() => setMobilePropertiesOpen(false)}
+            className="fixed inset-0 z-[110] bg-slate-950/60 backdrop-blur-sm lg:hidden"
+          />
+        )}
+
+        {/* RIGHT DRAWER / PROPERTIES PANEL */}
+        <aside
+          className={`fixed inset-y-0 right-0 z-[120] w-80 max-w-[85vw] transform border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:w-72 lg:translate-x-0 lg:shadow-none xl:w-80 ${
+            mobilePropertiesOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <PropertiesPanel
+            editorMode={editorMode}
+            selectedBuilding={selectedBuilding}
+            selectedRoad={selectedRoad}
+            selectedElement={selectedElement}
+            selectedCampusElement={selectedCampusElement}
+            handleBuildingSelect={handleBuildingSelect}
+            updateRoad={handleUpdateRoad}
+            deleteRoad={handleDeleteRoad}
+            handlePropertyChange={handlePropertyChange}
+            handlePositionChange={handlePositionChange}
+            handleDimensionChange={handleDimensionChange}
+            rotateElement={rotateElement}
+            saveSelectedElement={saveSelectedElement}
+            handleAddAsLocation={handleAddAsLocation}
+            handleDeleteElement={handleDeleteElement}
+            locationSaving={locationSaving}
+            handleDeleteBuilding={handleDeleteBuilding}
+            handleBuildingPropertyChange={handleBuildingPropertyChange}
+            handleBuildingPositionChange={handleBuildingPositionChange}
+            handleBuildingDimensionChange={handleBuildingDimensionChange}
+            handleCampusElementPropertyChange={handleCampusElementPropertyChange}
+            handleCampusElementPositionChange={handleCampusElementPositionChange}
+            handleCampusElementDimensionChange={handleCampusElementDimensionChange}
+            handleDeleteCampusElement={handleDeleteCampusElement}
+            onCloseMobile={() => setMobilePropertiesOpen(false)}
+          />
+        </aside>
       </div>
 
-      {/* MODALS */}
+      {/* MODALS & OVERLAYS */}
       <BuildingModal
         show={showBuildingModal}
         buildingForm={buildingForm}
@@ -1330,7 +1278,7 @@ const AdminCampusBuilder = () => {
         show={isLoading || savingMap}
         message={
           savingMap
-            ? "Saving map to database..."
+            ? "Saving map state..."
             : editorMode === "campus"
             ? "Loading campus..."
             : "Loading floor map..."

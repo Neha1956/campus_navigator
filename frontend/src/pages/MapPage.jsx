@@ -242,7 +242,7 @@ const CampusViewer3DInternal = ({
   }, [buildings, campusElements]);
 
   return (
-    <div className="w-full h-full min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
+    <div className="w-full h-full min-h-[380px] sm:min-h-[500px] lg:min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
       <Canvas
         shadows
         camera={{
@@ -308,27 +308,23 @@ const CampusViewer3DInternal = ({
       </Canvas>
 
       {!hideLabels && (
-        <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur border border-slate-700 text-white rounded-xl px-4 py-2.5 shadow-xl pointer-events-none">
-          <h3 className="font-bold text-sm">Campus 3D View</h3>
-          <p className="text-xs text-slate-400">
+        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-slate-900/80 backdrop-blur border border-slate-700 text-white rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 shadow-xl pointer-events-none max-w-[80vw]">
+          <h3 className="font-bold text-xs sm:text-sm">Campus 3D View</h3>
+          <p className="text-[10px] sm:text-xs text-slate-400 truncate">
             {buildings.length} Buildings • {campusElements.length} Areas • {campusRoads.length} Roads
           </p>
         </div>
       )}
 
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-3 text-xs text-slate-600 shadow-xl pointer-events-none">
-        🖱 Left Click + Drag = Rotate
-        <br />
-        🔍 Scroll = Zoom
-        <br />
-        🖱 Right Click = Pan
+      <div className="hidden sm:block absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-[11px] text-slate-600 shadow-xl pointer-events-none">
+        🖱 Drag = Rotate • 🔍 Scroll = Zoom • 🖱 Right Click = Pan
       </div>
     </div>
   );
 };
 
 /* =========================================================
-   3D FLOOR VIEWER (WITH DYNAMIC EXPANSION)
+   3D FLOOR VIEWER (DYNAMIC & RESPONSIVE)
 ========================================================= */
 
 const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
@@ -370,14 +366,14 @@ const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
       ))}
       {source && (
         <Html position={[getIndoorElementCenter(source).x, 65, getIndoorElementCenter(source).y]} center distanceFactor={800}>
-          <div className="rounded-full border-2 border-white bg-blue-600 px-3 py-1 text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
+          <div className="rounded-full border-2 border-white bg-blue-600 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
             START: {source.name}
           </div>
         </Html>
       )}
       {destinationPoint && (
         <Html position={[destinationPoint.x, 65, destinationPoint.y]} center distanceFactor={800}>
-          <div className="rounded-full border-2 border-white bg-red-600 px-3 py-1 text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
+          <div className="rounded-full border-2 border-white bg-red-600 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
             DESTINATION: {destination.name}
           </div>
         </Html>
@@ -396,7 +392,6 @@ const Floor3DViewer = ({
   routeDestination,
   routeDirections = [],
 }) => {
-  // Elements ke hisaab se floor boundaries calculate karein
   const bounds = useMemo(() => {
     const baseW = Number(floor?.width || 1200);
     const baseH = Number(floor?.height || 800);
@@ -439,7 +434,7 @@ const Floor3DViewer = ({
   const cameraDist = Math.max(bounds.width, bounds.depth);
 
   return (
-    <div className="w-full h-full min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
+    <div className="w-full h-full min-h-[380px] sm:min-h-[500px] lg:min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
       <Canvas
         shadows
         camera={{
@@ -457,7 +452,6 @@ const Floor3DViewer = ({
         />
         <Environment preset="city" />
 
-        {/* DYNAMIC FLOOR PLANE */}
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[bounds.centerX, -1, bounds.centerZ]}
@@ -467,7 +461,6 @@ const Floor3DViewer = ({
           <meshStandardMaterial color={floor?.backgroundColor || "#F8FAFC"} />
         </mesh>
 
-        {/* DYNAMIC FLOOR GRID */}
         <Grid
           args={[bounds.width, bounds.depth]}
           cellSize={20}
@@ -478,7 +471,6 @@ const Floor3DViewer = ({
           position={[bounds.centerX, 0, bounds.centerZ]}
         />
 
-        {/* FLOOR ELEMENTS */}
         {elements.map((el) => {
           const pos = el.position || {};
           const dim = el.dimensions || {};
@@ -504,7 +496,7 @@ const Floor3DViewer = ({
                 <lineBasicMaterial color="#334155" linewidth={1} />
               </lineSegments>
               <Html position={[0, elH / 2 + 10, 0]} center distanceFactor={800} occlude>
-                <div className="px-2 py-0.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-800 shadow select-none">
+                <div className="px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold whitespace-nowrap bg-white text-slate-800 shadow select-none">
                   {el.name}
                 </div>
               </Html>
@@ -518,7 +510,6 @@ const Floor3DViewer = ({
           destination={routeDestination}
         />
 
-        {/* ORBIT CONTROLS CENTERED DYNAMICALLY */}
         <OrbitControls
           enableDamping
           dampingFactor={0.08}
@@ -529,36 +520,37 @@ const Floor3DViewer = ({
         />
       </Canvas>
 
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-3">
+      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap items-center gap-2 sm:gap-3 max-w-[calc(100%-1.5rem)]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 bg-white text-slate-800 px-3.5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-slate-100 transition"
+          className="flex items-center gap-1.5 bg-white text-slate-800 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-slate-100 transition active:scale-95"
         >
-          <ArrowLeft size={16} />
-          Back to Campus Map
+          <ArrowLeft size={15} />
+          <span className="hidden xs:inline">Back to Campus Map</span>
+          <span className="xs:hidden">Back</span>
         </button>
 
-        <div className="bg-slate-900/90 text-white px-4 py-2 rounded-xl shadow-lg border border-slate-700 backdrop-blur">
-          <p className="font-bold text-xs">{building?.name}</p>
-          <p className="text-[11px] text-blue-400 font-semibold">{floor?.name} (Floor {floor?.floorNumber})</p>
+        <div className="bg-slate-900/90 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-lg border border-slate-700 backdrop-blur">
+          <p className="font-bold text-[11px] sm:text-xs truncate max-w-[140px] sm:max-w-[200px]">{building?.name}</p>
+          <p className="text-[10px] sm:text-[11px] text-blue-400 font-semibold">{floor?.name} (Floor {floor?.floorNumber})</p>
         </div>
       </div>
 
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-3 text-xs text-slate-600 shadow-xl pointer-events-none">
+      <div className="hidden sm:block absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-[11px] text-slate-600 shadow-xl pointer-events-none">
         🖱 Drag = Rotate Floor • 🔍 Scroll = Zoom • 🖱 Right Click = Pan
       </div>
 
       {routeDirections.length > 0 && (
-        <div className="absolute right-4 top-4 z-10 max-h-[min(420px,calc(100%-2rem))] w-[min(340px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur">
-          <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Indoor route</p>
-          <div className="mt-3 space-y-3">
+        <div className="absolute right-3 top-14 sm:right-4 sm:top-4 z-10 max-h-[min(380px,calc(100%-4rem))] w-[min(320px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-slate-200 bg-white/95 p-3.5 sm:p-4 shadow-xl backdrop-blur custom-scrollbar">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">Indoor Route</p>
+          <div className="mt-2.5 space-y-2.5">
             {routeDirections.map((direction) => (
-              <div key={`${direction.step}-${direction.to._id}`} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+              <div key={`${direction.step}-${direction.to._id}`} className="flex gap-2.5 items-start">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white mt-0.5">
                   {direction.step}
                 </span>
-                <p className="text-xs leading-5 text-slate-600">
+                <p className="text-xs leading-snug text-slate-600">
                   Go from <strong className="text-slate-800">{direction.from.name}</strong> to <strong className="text-slate-800">{direction.to.name}</strong>
                   {direction.floorName ? ` on ${direction.floorName}` : ""}.
                 </p>
@@ -677,7 +669,6 @@ const MapPage = () => {
 
   const handleIndoorRoute = (route) => {
     const destinationFloor = floors.find((floor) => floor._id === route.floorId);
-
     if (!destinationFloor) return;
 
     setIndoorRoute(route);
@@ -729,55 +720,60 @@ const MapPage = () => {
 
   return (
     <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden bg-slate-50 relative">
+      {/* RESPONSIVE HEADER */}
       <div className="shrink-0 border-b border-slate-200 bg-white">
-        <div className="px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="px-3.5 py-3 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Title & Icon */}
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
                 <Navigation size={20} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
                   Campus Map
                 </h1>
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] sm:text-xs text-slate-500">
                   Explore buildings, roads and campus locations
                 </p>
               </div>
             </div>
 
+            {/* Filter & View Controls */}
             {!selectedFloorForView && (
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {/* 2D / 3D Toggle */}
+                <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
                   <button
                     type="button"
                     onClick={() => setViewMode("2d")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-bold transition ${
                       viewMode === "2d"
                         ? "bg-white text-blue-600 shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <MapIcon size={15} />
-                    2D Map
+                    <MapIcon size={14} />
+                    <span>2D Map</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setViewMode("3d")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-bold transition ${
                       viewMode === "3d"
                         ? "bg-blue-600 text-white shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <Boxes size={15} />
-                    3D View
+                    <Boxes size={14} />
+                    <span>3D View</span>
                   </button>
                 </div>
 
-                <div className="relative w-full sm:w-64">
+                {/* Search Bar */}
+                <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] sm:w-60">
                   <Search
-                    size={16}
+                    size={15}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                   <input
@@ -785,19 +781,20 @@ const MapPage = () => {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search location..."
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 sm:py-2 pl-8 sm:pl-9 pr-3 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
                   />
                 </div>
 
-                <div className="relative">
+                {/* Category Dropdown */}
+                <div className="relative shrink-0 w-28 sm:w-36">
                   <SlidersHorizontal
-                    size={15}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={14}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-8 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:w-40"
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-1.5 sm:py-2 pl-7 pr-6 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
                   >
                     {categories.map((item) => (
                       <option key={item} value={item}>
@@ -812,6 +809,7 @@ const MapPage = () => {
         </div>
       </div>
 
+      {/* MAP VIEWPORT WRAPPER */}
       <div className="min-h-0 flex-1 w-full p-2 sm:p-3 lg:p-4">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {selectedFloorForView ? (
@@ -855,57 +853,58 @@ const MapPage = () => {
 
           {/* LOCATION DETAILS PANEL */}
           {selectedLocation && !selectedFloorForView && (
-            <div className="absolute right-4 top-4 z-[3000] w-[320px] max-w-[calc(100%-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-              <div className="flex items-start justify-between border-b border-slate-100 p-4">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4 z-[3000] w-[300px] sm:w-[320px] max-w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[85%] overflow-y-auto">
+              <div className="flex items-start justify-between border-b border-slate-100 p-3.5 sm:p-4">
                 <div className="min-w-0 pr-3">
-                  <div className="mb-1 inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
+                  <div className="mb-1 inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-600">
                     {selectedLocation.category || "Location"}
                   </div>
-                  <h2 className="truncate text-lg font-bold text-slate-900">
+                  <h2 className="truncate text-base sm:text-lg font-bold text-slate-900">
                     {selectedLocation.name}
                   </h2>
                 </div>
 
                 <button
+                  type="button"
                   onClick={clearSelection}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="space-y-4 p-4">
+              <div className="space-y-3.5 p-3.5 sm:p-4">
                 {selectedLocation.description && (
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                       Description
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                    <p className="mt-0.5 text-xs sm:text-sm leading-relaxed text-slate-600">
                       {selectedLocation.description}
                     </p>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-400">X Position</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-xl bg-slate-50 p-2.5">
+                    <p className="text-[10px] text-slate-400">X Position</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
                       {selectedLocation.x ?? "-"}
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-400">Y Position</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                  <div className="rounded-xl bg-slate-50 p-2.5">
+                    <p className="text-[10px] text-slate-400">Y Position</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
                       {selectedLocation.y ?? "-"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3">
-                  <span className="text-sm text-slate-500">Status</span>
+                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                  <span className="text-xs text-slate-500">Status</span>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                       selectedLocation.isActive
                         ? "bg-emerald-100 text-emerald-700"
                         : "bg-red-100 text-red-700"
@@ -915,19 +914,19 @@ const MapPage = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <a
                     href={`/locations/${selectedLocation._id}`}
-                    className="rounded-xl bg-slate-100 px-4 py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-200"
+                    className="rounded-xl bg-slate-100 px-3 py-2 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
                   >
                     View Details
                   </a>
 
                   <a
                     href={`/directions?to=${selectedLocation._id}`}
-                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white transition hover:bg-blue-700"
+                    className="rounded-xl bg-blue-600 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-blue-700 shadow-sm"
                   >
-                    Direction
+                    Directions
                   </a>
                 </div>
               </div>
@@ -938,19 +937,19 @@ const MapPage = () => {
 
       {/* SPECIFIC BUILDING FLOORS MODAL */}
       {activeBuildingForFloors && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 p-4 select-none">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                  <Building2 size={20} />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 p-4 select-none backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85dvh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <Building2 size={19} />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
                     {activeBuildingForFloors.name}
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    Select a floor to view 3D layout
+                  <p className="text-[11px] text-slate-500">
+                    Select floor to view 3D plan
                   </p>
                 </div>
               </div>
@@ -964,14 +963,14 @@ const MapPage = () => {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-2.5">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-2.5 custom-scrollbar">
               {floorLoading ? (
                 <div className="py-10 text-center text-xs text-slate-400">
                   <div className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
                   Loading building floors...
                 </div>
               ) : floors.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs sm:text-sm text-slate-400">
                   No floors created for this building yet.
                 </div>
               ) : (
@@ -980,46 +979,46 @@ const MapPage = () => {
                     key={floor._id}
                     type="button"
                     onClick={() => handleSelectFloor(floor)}
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/60 transition group shadow-sm text-left"
+                    className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/60 transition group shadow-sm text-left active:scale-[0.99]"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:bg-blue-600 group-hover:text-white transition">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:bg-blue-600 group-hover:text-white transition shrink-0">
                         {floor.floorNumber ?? "F"}
                       </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-800 group-hover:text-blue-700 transition">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-blue-700 transition truncate">
                           {floor.name}
                         </h4>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[10px] sm:text-[11px] text-slate-400">
                           Floor {floor.floorNumber}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs font-semibold text-blue-600">
-                      View 3D
-                      <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-blue-600 shrink-0">
+                      <span>View 3D</span>
+                      <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </button>
                 ))
               )}
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+            <div className="p-3.5 sm:p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setActiveBuildingForFloors(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={() => setShowIndoorDirections(true)}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 shadow-sm"
               >
                 <Route size={14} />
-                Indoor directions
+                <span>Indoor Directions</span>
               </button>
             </div>
           </div>
