@@ -354,6 +354,7 @@ const CampusViewer3DCanvas = ({
   mapHeight,
   activeTool,
   readOnly,
+  currentLocation,
 }) => {
   const [orbitEnabled, setOrbitEnabled] = useState(true);
 
@@ -435,6 +436,25 @@ const CampusViewer3DCanvas = ({
           />
         ))}
 
+        {/* GOOGLE MAPS STYLE 3D BLUE PIN */}
+        {currentLocation && (
+          <group position={[Number(currentLocation.x), 18, Number(currentLocation.y)]} renderOrder={1001}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 2, 0]}>
+              <ringGeometry args={[16, 32, 32]} />
+              <meshBasicMaterial color="#3B82F6" transparent opacity={0.6} depthTest={false} />
+            </mesh>
+            <mesh position={[0, 30, 0]}>
+              <coneGeometry args={[14, 35, 24]} />
+              <meshStandardMaterial color="#2563EB" emissive="#1D4ED8" emissiveIntensity={0.8} />
+            </mesh>
+            <Html position={[0, 65, 0]} center distanceFactor={900}>
+              <div className="rounded-full border-2 border-white bg-blue-600 px-3.5 py-1 text-[11px] font-extrabold uppercase text-white shadow-2xl whitespace-nowrap">
+                {currentLocation.name}
+              </div>
+            </Html>
+          </group>
+        )}
+
         <OrbitControls
           enabled={orbitEnabled}
           enableDamping
@@ -442,7 +462,11 @@ const CampusViewer3DCanvas = ({
           minDistance={100}
           maxDistance={5000}
           maxPolarAngle={Math.PI / 2.05}
-          target={[mapWidth / 2, 0, mapHeight / 2]}
+          target={[
+            currentLocation ? Number(currentLocation.x) : mapWidth / 2,
+            0,
+            currentLocation ? Number(currentLocation.y) : mapHeight / 2,
+          ]}
         />
       </Canvas>
 
@@ -498,6 +522,7 @@ const CampusMap = ({
   setSelectedElement,
   setSelectedCampusElement,
   showOpenFloorsOn3D = true,
+  currentLocation = null,
 }) => {
   const wrapperRef = useRef(null);
   const mapViewportRef = useRef(null);
@@ -514,6 +539,9 @@ const CampusMap = ({
   const [resizingRoad, setResizingRoad] = useState(null);
   const roadResizePreviewRef = useRef(null);
   const [roadResizePreview, setRoadResizePreview] = useState(null);
+
+  // Active current location marker resolved from props
+  const activeCurrentLoc = currentLocation || (sourceLocation?.isCurrentLocation ? sourceLocation : null);
 
   const normalizedBuildings = useMemo(() => {
     return (Array.isArray(buildings) ? buildings : [])
@@ -624,6 +652,13 @@ const CampusMap = ({
       requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
     });
 
+    if (activeCurrentLoc) {
+      const x = safeNumber(activeCurrentLoc.x);
+      const y = safeNumber(activeCurrentLoc.y);
+      requiredWidth = Math.max(requiredWidth, x + MAP_EXTRA_PADDING);
+      requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
+    }
+
     const finalWidth = Math.ceil(requiredWidth / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
     const finalHeight = Math.ceil(requiredHeight / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
 
@@ -640,6 +675,7 @@ const CampusMap = ({
     locations,
     routeLocations,
     routePath,
+    activeCurrentLoc,
   ]);
 
   const mapWidth = dynamicCampusSize.width;
@@ -993,6 +1029,7 @@ const CampusMap = ({
             mapWidth={mapWidth}
             mapHeight={mapHeight}
             activeTool={activeTool}
+            currentLocation={activeCurrentLoc}
           />
         </div>
       ) : (
@@ -1306,7 +1343,7 @@ const CampusMap = ({
                 </g>
               )}
 
-              {sourceLocation && (
+              {sourceLocation && !sourceLocation.isCurrentLocation && (
                 <g
                   transform={`translate(${Number(
                     sourceLocation.x
@@ -1319,6 +1356,64 @@ const CampusMap = ({
                     strokeWidth="4"
                   />
                   <circle r="6" fill="#ffffff" />
+                </g>
+              )}
+
+              {/* =========================================================
+                  GOOGLE MAPS STYLE LIVE LOCATION PIN (SVG 2D)
+              ========================================================= */}
+              {activeCurrentLoc && (
+                <g
+                  transform={`translate(${Number(activeCurrentLoc.x)}, ${Number(
+                    activeCurrentLoc.y
+                  )})`}
+                  style={{ pointerEvents: "none" }}
+                >
+                  {/* Outer Pulsing Aura */}
+                  <circle
+                    r="32"
+                    fill="#3b82f6"
+                    opacity="0.25"
+                    className="animate-ping"
+                  />
+                  <circle r="20" fill="#3b82f6" opacity="0.2" />
+
+                  {/* Google Maps Style Blue Pin Body */}
+                  <path
+                    d="M0,-32 C-12,-32 -22,-22 -22,-10 C-22,6 0,28 0,32 C0,28 22,6 22,-10 C22,-22 12,-32 0,-32 Z"
+                    fill="#2563eb"
+                    stroke="#ffffff"
+                    strokeWidth="3"
+                    filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.3))"
+                  />
+                  {/* Center White Dot on Pin */}
+                  <circle r="7" fill="#ffffff" cy="-10" />
+
+                  {/* "YOU ARE HERE" Floating Banner */}
+                  <g transform="translate(0, -42)">
+                    <rect
+                      x="-60"
+                      y="-18"
+                      width="120"
+                      height="24"
+                      rx="8"
+                      fill="#0f172a"
+                      fillOpacity="0.95"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+                    <text
+                      x="0"
+                      y="-3"
+                      textAnchor="middle"
+                      fontSize="10"
+                      fontWeight="800"
+                      fill="#ffffff"
+                      pointerEvents="none"
+                    >
+                      YOU ARE HERE
+                    </text>
+                  </g>
                 </g>
               )}
 

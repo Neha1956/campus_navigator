@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -45,12 +44,8 @@ const getDimensions = (element) => {
 
   return {
     width: Number(dimensions.width || 100),
-    height: Number(
-      dimensions.height || 20
-    ),
-    depth: Number(
-      dimensions.depth || dimensions.height || 80
-    ),
+    height: Number(dimensions.height || 20),
+    depth: Number(dimensions.depth || dimensions.height || 80),
   };
 };
 
@@ -58,11 +53,7 @@ const getDimensions = (element) => {
    ROOM / ELEMENT
 ========================================================= */
 
-const Element3D = ({
-  element,
-  selected,
-  onSelect,
-}) => {
+const Element3D = ({ element, selected, onSelect }) => {
   const position = getPosition(element);
   const dimensions = getDimensions(element);
 
@@ -71,16 +62,9 @@ const Element3D = ({
     COLORS[element.type] ||
     "#CBD5E1";
 
-  const x =
-    position.x + dimensions.width / 2;
-
-  const y =
-    position.z +
-    dimensions.height / 2;
-
-  const z =
-    position.y +
-    dimensions.depth / 2;
+  const x = position.x + dimensions.width / 2;
+  const y = position.z + dimensions.height / 2;
+  const z = position.y + dimensions.depth / 2;
 
   return (
     <group
@@ -91,7 +75,6 @@ const Element3D = ({
       }}
     >
       {/* MAIN OBJECT */}
-
       <mesh castShadow receiveShadow>
         <boxGeometry
           args={[
@@ -100,7 +83,6 @@ const Element3D = ({
             dimensions.depth,
           ]}
         />
-
         <meshStandardMaterial
           color={color}
           transparent
@@ -109,7 +91,6 @@ const Element3D = ({
       </mesh>
 
       {/* BORDER */}
-
       <lineSegments>
         <edgesGeometry
           args={[
@@ -120,19 +101,13 @@ const Element3D = ({
             ),
           ]}
         />
-
         <lineBasicMaterial
-          color={
-            selected
-              ? "#2563EB"
-              : "#475569"
-          }
+          color={selected ? "#2563EB" : "#475569"}
           linewidth={selected ? 3 : 1}
         />
       </lineSegments>
 
       {/* SELECTED BORDER */}
-
       {selected && (
         <mesh>
           <boxGeometry
@@ -142,27 +117,18 @@ const Element3D = ({
               dimensions.depth + 8,
             ]}
           />
-
-          <meshBasicMaterial
-            color="#2563EB"
-            wireframe
-          />
+          <meshBasicMaterial color="#2563EB" wireframe />
         </mesh>
       )}
 
       {/* NAME */}
-
       <Html
-        position={[
-          0,
-          dimensions.height / 2 + 10,
-          0,
-        ]}
+        position={[0, dimensions.height / 2 + 10, 0]}
         center
         distanceFactor={500}
       >
         <div
-          className={`px-2 py-1 rounded-lg text-xs font-semibold whitespace-nowrap shadow ${
+          className={`px-2 py-1 rounded-lg text-xs font-semibold whitespace-nowrap shadow select-none pointer-events-none ${
             selected
               ? "bg-blue-600 text-white"
               : "bg-white text-gray-800"
@@ -179,27 +145,15 @@ const Element3D = ({
    FLOOR
 ========================================================= */
 
-const FloorBase = ({
-  width,
-  depth,
-}) => {
+const FloorBase = ({ width, depth }) => {
   return (
     <mesh
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[
-        width / 2,
-        -1,
-        depth / 2,
-      ]}
+      position={[width / 2, -1, depth / 2]}
       receiveShadow
     >
-      <planeGeometry
-        args={[width, depth]}
-      />
-
-      <meshStandardMaterial
-        color="#F8FAFC"
-      />
+      <planeGeometry args={[width, depth]} />
+      <meshStandardMaterial color="#F8FAFC" />
     </mesh>
   );
 };
@@ -212,12 +166,8 @@ const FloorLabel = ({ floor }) => {
   if (!floor) return null;
 
   return (
-    <Html
-      position={[0, 5, 0]}
-      center
-      distanceFactor={800}
-    >
-      <div className="bg-blue-600 text-white px-4 py-2 rounded-xl shadow-xl font-bold">
+    <Html position={[0, 5, 0]} center distanceFactor={800}>
+      <div className="bg-blue-600 text-white px-4 py-2 rounded-xl shadow-xl font-bold select-none pointer-events-none">
         {floor.name}
       </div>
     </Html>
@@ -233,30 +183,10 @@ const Scene = ({
   floor,
   selectedElement,
   onSelectElement,
+  currentLocation,
 }) => {
-  /* =======================================================
-     EXISTING FLOOR SIZE
-  ======================================================= */
-
-  const baseWidth = Number(
-    floor?.width || 1000
-  );
-
-  const baseDepth = Number(
-    floor?.height || 700
-  );
-
-  /* =======================================================
-     DYNAMIC FLOOR SIZE
-
-     Existing floor size will remain the minimum size.
-
-     If any element goes outside the floor,
-     floor will automatically increase.
-
-     Existing working behaviour is not changed.
-  ======================================================= */
-
+  const baseWidth = Number(floor?.width || 1000);
+  const baseDepth = Number(floor?.height || 700);
   const FLOOR_PADDING = 100;
 
   const dynamicFloorSize = React.useMemo(() => {
@@ -267,31 +197,8 @@ const Scene = ({
       const position = getPosition(element);
       const dimensions = getDimensions(element);
 
-      /* ---------------------------------------------------
-         ELEMENT RIGHT EDGE
-
-         position.x = element starting X
-         width       = element width
-      --------------------------------------------------- */
-
-      const elementRight =
-        position.x + dimensions.width;
-
-      /* ---------------------------------------------------
-         ELEMENT BOTTOM EDGE
-
-         position.y = element starting Y
-         depth      = element depth
-      --------------------------------------------------- */
-
-      const elementBottom =
-        position.y + dimensions.depth;
-
-      /* ---------------------------------------------------
-         ONLY INCREASE FLOOR SIZE
-
-         Never reduce existing floor size.
-      --------------------------------------------------- */
+      const elementRight = position.x + dimensions.width;
+      const elementBottom = position.y + dimensions.depth;
 
       requiredWidth = Math.max(
         requiredWidth,
@@ -304,25 +211,25 @@ const Scene = ({
       );
     });
 
+    if (currentLocation) {
+      requiredWidth = Math.max(
+        requiredWidth,
+        Number(currentLocation.x || 0) + FLOOR_PADDING
+      );
+      requiredDepth = Math.max(
+        requiredDepth,
+        Number(currentLocation.y || 0) + FLOOR_PADDING
+      );
+    }
+
     return {
       width: requiredWidth,
       depth: requiredDepth,
     };
-  }, [
-    elements,
-    baseWidth,
-    baseDepth,
-  ]);
+  }, [elements, baseWidth, baseDepth, currentLocation]);
 
-  /* =======================================================
-     FINAL FLOOR SIZE
-  ======================================================= */
-
-  const width =
-    dynamicFloorSize.width;
-
-  const depth =
-    dynamicFloorSize.depth;
+  const width = dynamicFloorSize.width;
+  const depth = dynamicFloorSize.depth;
 
   return (
     <>
@@ -334,18 +241,7 @@ const Scene = ({
         castShadow
       />
 
-      {/* =====================================================
-          DYNAMIC FLOOR
-      ===================================================== */}
-
-      <FloorBase
-        width={width}
-        depth={depth}
-      />
-
-      {/* =====================================================
-          GRID
-      ===================================================== */}
+      <FloorBase width={width} depth={depth} />
 
       <Grid
         args={[width, depth]}
@@ -355,47 +251,61 @@ const Scene = ({
         sectionThickness={1}
         fadeDistance={1500}
         fadeStrength={1}
-        position={[
-          width / 2,
-          0,
-          depth / 2,
-        ]}
+        position={[width / 2, 0, depth / 2]}
       />
 
-      {/* =====================================================
-          FLOOR LABEL
-      ===================================================== */}
-
       <FloorLabel floor={floor} />
-
-      {/* =====================================================
-          ELEMENTS
-      ===================================================== */}
 
       {elements.map((element) => (
         <Element3D
           key={element._id}
           element={element}
-          selected={
-            selectedElement?._id ===
-            element._id
-          }
+          selected={selectedElement?._id === element._id}
           onSelect={onSelectElement}
         />
       ))}
 
-      {/* =====================================================
-          ORBIT CONTROLS
-      ===================================================== */}
+      {/* 3D CURRENT LOCATION MARKER INSIDE FLOOR */}
+      {currentLocation && (
+        <group
+          position={[
+            Number(currentLocation.x || 0),
+            12,
+            Number(currentLocation.y || 0),
+          ]}
+          renderOrder={1001}
+        >
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 2, 0]}>
+            <ringGeometry args={[10, 22, 32]} />
+            <meshBasicMaterial
+              color="#3B82F6"
+              transparent
+              opacity={0.6}
+              depthTest={false}
+            />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[7, 16, 16]} />
+            <meshStandardMaterial
+              color="#2563EB"
+              emissive="#1D4ED8"
+              emissiveIntensity={1}
+            />
+          </mesh>
+          <Html position={[0, 18, 0]} center distanceFactor={600}>
+            <div className="rounded-full border-2 border-white bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-2xl whitespace-nowrap select-none pointer-events-none">
+              You Are Here
+            </div>
+          </Html>
+        </group>
+      )}
 
       <OrbitControls
         enableDamping
         dampingFactor={0.08}
         minDistance={100}
         maxDistance={3000}
-        maxPolarAngle={
-          Math.PI / 2.05
-        }
+        maxPolarAngle={Math.PI / 2.05}
       />
     </>
   );
@@ -412,6 +322,7 @@ const CampusViewer3D = ({
   elements = [],
   selectedElement,
   onSelectElement,
+  currentLocation = null, // Current location support
 }) => {
   if (!currentFloor) {
     return (
@@ -426,11 +337,7 @@ const CampusViewer3D = ({
       <Canvas
         shadows
         camera={{
-          position: [
-            700,
-            700,
-            800,
-          ],
+          position: [700, 700, 800],
           fov: 45,
           near: 0.1,
           far: 10000,
@@ -441,26 +348,18 @@ const CampusViewer3D = ({
         <Scene
           elements={elements}
           floor={currentFloor}
-          selectedElement={
-            selectedElement
-          }
-          onSelectElement={
-            onSelectElement
-          }
+          selectedElement={selectedElement}
+          onSelectElement={onSelectElement}
+          currentLocation={currentLocation}
         />
       </Canvas>
 
       <div className="absolute top-4 left-4 bg-black/70 text-white rounded-xl px-4 py-3">
-        <p className="font-bold">
-          {building?.name}
-        </p>
-
-        <p className="text-sm text-gray-300">
-          {currentFloor?.name}
-        </p>
+        <p className="font-bold">{building?.name}</p>
+        <p className="text-sm text-gray-300">{currentFloor?.name}</p>
       </div>
 
-      <div className="absolute bottom-4 right-4 bg-white/90 rounded-xl px-4 py-3 text-xs text-gray-600">
+      <div className="absolute bottom-4 right-4 bg-white/90 rounded-xl px-4 py-3 text-xs text-gray-600 pointer-events-none select-none">
         🖱 Drag = Rotate
         <br />
         🔍 Scroll = Zoom
@@ -472,4 +371,3 @@ const CampusViewer3D = ({
 };
 
 export default CampusViewer3D;
-

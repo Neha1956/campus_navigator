@@ -13,6 +13,8 @@ import {
   LocateFixed,
   Boxes,
   Map as MapIcon,
+  Loader2,
+  Info,
 } from "lucide-react";
 
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
@@ -22,6 +24,13 @@ import { fetchRoads } from "../redux/slices/roadSlice";
 import { fetchCampusElements } from "../redux/slices/campusElementSlice";
 import { fetchLocations } from "../redux/slices/locationSlice";
 import { fetchRouteBetweenLocations } from "../redux/slices/routeSlice";
+
+// Frontend utils se GPS helpers import
+import {
+  getDeviceCoordinates,
+  isInsideCampus,
+  convertGpsToCampus,
+} from "../utils/geoUtils";
 
 /* =========================================================
    3D INLINE VIEWPORT COMPONENTS (DIRECTIONS SUPPORTED)
@@ -166,7 +175,7 @@ const Road3D = ({ road }) => {
 };
 
 /* =========================================================
-   NEW ULTRA-VISIBLE GLOWING 3D TUBE PATH (ALWAYS ON TOP)
+   3D GLOWING TUBE PATH
 ========================================================= */
 
 const DirectionPath3D = ({ routePoints = [], source, destination }) => {
@@ -181,36 +190,21 @@ const DirectionPath3D = ({ routePoints = [], source, destination }) => {
 
   return (
     <group>
-      {/* 1. OUTER GLOW CASING */}
       <mesh renderOrder={998}>
         <tubeGeometry args={[curve, 120, 9, 12, false]} />
-        <meshBasicMaterial
-          color="#1E40AF"
-          transparent
-          opacity={0.4}
-          depthTest={false}
-        />
+        <meshBasicMaterial color="#1E40AF" transparent opacity={0.4} depthTest={false} />
       </mesh>
 
-      {/* 2. CORE NEON BRIGHT ARTERY TUBE */}
       <mesh renderOrder={999}>
         <tubeGeometry args={[curve, 120, 5.5, 12, false]} />
-        <meshBasicMaterial
-          color="#38BDF8"
-          depthTest={false}
-        />
+        <meshBasicMaterial color="#38BDF8" depthTest={false} />
       </mesh>
 
-      {/* 3. INNER WHITE HOTLINE */}
       <mesh renderOrder={1000}>
         <tubeGeometry args={[curve, 120, 2, 8, false]} />
-        <meshBasicMaterial
-          color="#FFFFFF"
-          depthTest={false}
-        />
+        <meshBasicMaterial color="#FFFFFF" depthTest={false} />
       </mesh>
 
-      {/* 4. SOURCE BEACON & RINGS */}
       {source && (
         <group position={[Number(source.x), 0, Number(source.y)]} renderOrder={1001}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
@@ -231,13 +225,12 @@ const DirectionPath3D = ({ routePoints = [], source, destination }) => {
           </mesh>
           <Html center distanceFactor={800} position={[0, 95, 0]}>
             <div className="bg-blue-600 border-2 border-white text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-2xl whitespace-nowrap">
-              START: {source.name}
+              {source.isCurrentLocation ? "YOU ARE HERE" : `START: ${source.name}`}
             </div>
           </Html>
         </group>
       )}
 
-      {/* 5. DESTINATION BEACON & RINGS */}
       {destination && (
         <group position={[Number(destination.x), 0, Number(destination.y)]} renderOrder={1001}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
@@ -362,27 +355,9 @@ const DirectionsViewer3D = ({
           target={[bounds.width / 2, 0, bounds.height / 2]}
         />
       </Canvas>
-
-      <div className="absolute top-16 left-4 bg-slate-900/85 backdrop-blur border border-slate-700 text-white rounded-xl px-4 py-2 shadow-xl pointer-events-none">
-        <h3 className="font-bold text-xs flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-          3D Walking Route
-        </h3>
-        <p className="text-[11px] text-slate-400">
-          Glowing neon path shows direction
-        </p>
-      </div>
-
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-2.5 text-[11px] text-slate-600 shadow-xl pointer-events-none">
-        🖱 Drag = Rotate • 🔍 Scroll = Zoom • 🖱 Right Click = Pan
-      </div>
     </div>
   );
 };
-
-/* =========================================================
-   DIRECTIONS MAP CONTAINER (2D & 3D SWITCHABLE)
-========================================================= */
 
 const DirectionsMap = ({
   locations = [],
@@ -392,11 +367,12 @@ const DirectionsMap = ({
   campusElements = [],
   viewMode = "2d",
   setViewMode,
+  customSourceLocation,
 }) => {
   const fromId = selectedRoute?.from?._id;
   const toId = selectedRoute?.to?._id;
 
-  const source = locations.find((location) => location._id === fromId);
+  const source = customSourceLocation || locations.find((location) => location._id === fromId);
   const destination = locations.find((location) => location._id === toId);
 
   const routePoints = useMemo(() => {
@@ -554,16 +530,56 @@ const Directions = () => {
   const [to, setTo] = useState("");
   const [viewMode, setViewMode] = useState("2d");
 
-  const locationOptions = useMemo(
-    () =>
-      locations.map((location) => ({
-        value: location._id,
-        label: location.name,
-        description: [location.building, location.category].filter(Boolean).join(" • "),
-        searchText: `${location.name} ${location.building || ""} ${location.category || ""}`,
-      })),
-    [locations]
-  );
+  const [locating, setLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState("");
+  const [customSource, setCustomSource] = useState(null);
+
+  // DYNAMIC MAIN GATE FINDER (Searches DB locations for "main gate")
+  const getDynamicMainGate = () => {
+    const gateLocation = (Array.isArray(locations) ? locations : []).find(
+      (loc) => loc.name?.toLowerCase().includes("main gate") || loc.category === "gate"
+    );
+    if (gateLocation) {
+      return {
+        _id: gateLocation._id,
+        name: gateLocation.name || "Main Gate",
+        x: Number(gateLocation.x || 150),
+        y: Number(gateLocation.y || 750),
+        isCurrentLocation: true,
+      };
+    }
+
+    return {
+      _id: "default-fallback-main-gate",
+      name: "Main Gate",
+      x: 200,
+      y: 750,
+      isCurrentLocation: true,
+    };
+  };
+
+  const locationOptions = useMemo(() => {
+    const list = locations.map((location) => ({
+      value: location._id,
+      label: location.name,
+      description: [location.building, location.category].filter(Boolean).join(" • "),
+      searchText: `${location.name} ${location.building || ""} ${location.category || ""}`,
+    }));
+
+    if (customSource) {
+      return [
+        {
+          value: customSource._id,
+          label: `📍 ${customSource.name}`,
+          description: "Live Coordinate",
+          searchText: "current location my live gps gate",
+        },
+        ...list,
+      ];
+    }
+
+    return list;
+  }, [locations, customSource]);
 
   useEffect(() => {
     if (!buildings.length) dispatch(fetchBuildings());
@@ -572,12 +588,72 @@ const Directions = () => {
     if (!locations.length) dispatch(fetchLocations());
   }, [dispatch, locations.length, buildings.length, roads.length, campusElements.length]);
 
+  const handleUseCurrentLocation = async () => {
+    setLocating(true);
+    setLocationNotice("");
+
+    try {
+      const coords = await getDeviceCoordinates();
+      const inside = isInsideCampus(coords.lat, coords.lng);
+
+      if (inside) {
+        const campusPos = convertGpsToCampus(coords.lat, coords.lng);
+        const liveSource = {
+          _id: "my-live-gps",
+          name: "My Live Location (GPS)",
+          x: campusPos.x,
+          y: campusPos.y,
+          isCurrentLocation: true,
+        };
+
+        setCustomSource(liveSource);
+        setFrom(liveSource._id);
+        setLocationNotice("Live GPS location found successfully!");
+      } else {
+        const dynamicMainGate = getDynamicMainGate();
+        setCustomSource(dynamicMainGate);
+        setFrom(dynamicMainGate._id);
+        setLocationNotice(
+          `You are outside the campus. Starting point set to '${dynamicMainGate.name}'.`
+        );
+      }
+    } catch (err) {
+      console.warn("GPS error, applying Main Gate fallback:", err.message);
+      const dynamicMainGate = getDynamicMainGate();
+      setCustomSource(dynamicMainGate);
+      setFrom(dynamicMainGate._id);
+      setLocationNotice(
+        `Unable to retrieve GPS, starting point set to '${dynamicMainGate.name}'.`
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
+
   const handleFindRoute = () => {
     if (!from || !to || from === to) return;
 
+    let actualFromId = from;
+    if (customSource && from === customSource._id) {
+      let closestLoc = locations[0];
+      let minDistance = Infinity;
+
+      locations.forEach((loc) => {
+        const dist = Math.hypot(loc.x - customSource.x, loc.y - customSource.y);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestLoc = loc;
+        }
+      });
+
+      if (closestLoc) {
+        actualFromId = closestLoc._id;
+      }
+    }
+
     dispatch(
       fetchRouteBetweenLocations({
-        from,
+        from: actualFromId,
         to,
       })
     );
@@ -614,8 +690,40 @@ const Directions = () => {
 
       <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto] lg:items-end">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <SearchableSelect label="From" icon={MapPin} value={from} options={locationOptions} placeholder="Type a campus location..." onChange={setFrom} />
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                Start Point
+              </span>
+
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={locating}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600 hover:bg-blue-100 active:scale-95 transition disabled:opacity-50"
+              >
+                {locating ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <LocateFixed size={13} />
+                )}
+                <span>{locating ? "Locating..." : "Use My Location"}</span>
+              </button>
+            </div>
+
+            <SearchableSelect
+              label=""
+              icon={MapPin}
+              value={from}
+              options={locationOptions}
+              placeholder="Type a campus location..."
+              onChange={(val) => {
+                setFrom(val);
+                if (val !== customSource?._id) {
+                  setLocationNotice("");
+                }
+              }}
+            />
           </div>
 
           <button
@@ -627,7 +735,20 @@ const Directions = () => {
           </button>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <SearchableSelect label="To" icon={Navigation} value={to} options={locationOptions} placeholder="Type a destination..." onChange={setTo} accent="red" />
+            <div className="mb-2">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                Destination
+              </span>
+            </div>
+            <SearchableSelect
+              label=""
+              icon={Navigation}
+              value={to}
+              options={locationOptions}
+              placeholder="Type a destination..."
+              onChange={setTo}
+              accent="red"
+            />
           </div>
 
           <button
@@ -639,6 +760,13 @@ const Directions = () => {
             {routeLoading ? "Finding Route..." : "Get Directions"}
           </button>
         </div>
+
+        {locationNotice && (
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50/80 p-3 text-xs font-medium text-blue-800 border border-blue-200">
+            <Info size={15} className="shrink-0 text-blue-600" />
+            <span>{locationNotice}</span>
+          </div>
+        )}
 
         {routeError && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600">
@@ -657,6 +785,9 @@ const Directions = () => {
                 campusElements={campusElements}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
+                customSourceLocation={
+                  customSource && from === customSource._id ? customSource : null
+                }
               />
             </div>
 
@@ -730,7 +861,10 @@ const Directions = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex justify-between gap-3">
                         <p className="font-semibold text-slate-800">
-                          Start from {selectedRoute.from?.name}
+                          Start from{" "}
+                          {customSource && from === customSource._id
+                            ? customSource.name
+                            : selectedRoute.from?.name}
                         </p>
                         <span className="text-xs text-slate-400">0 m</span>
                       </div>
@@ -773,38 +907,6 @@ const Directions = () => {
                   ))}
                 </div>
               </div>
-
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <div className="flex gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
-                    <LocateFixed size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-blue-700">
-                      Shortest walking route found
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-blue-600">
-                      Toggle between 2D Map and 3D View to inspect elevation, obstacles, and campus surroundings.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!selectedRoute && !routeLoading && !routeError && (
-          <div className="mt-6 flex min-h-[400px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white">
-            <div className="max-w-sm px-6 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                <Navigation size={28} />
-              </div>
-              <h2 className="mt-4 text-lg font-bold text-slate-800">
-                Find Your Campus Route
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Select your starting location and destination to see the shortest walking route on the 2D/3D campus map.
-              </p>
             </div>
           </div>
         )}

@@ -15,6 +15,9 @@ import {
   Building2,
   ArrowLeft,
   Route,
+  LocateFixed,
+  Loader2,
+  Info,
 } from "lucide-react";
 
 import {
@@ -35,6 +38,12 @@ import { fetchMapElementsByFloor } from "../redux/slices/mapElementSlice";
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
 import IndoorDirectionsPanel from "../components/map/IndoorDirectionsPanel";
 import { getIndoorElementCenter } from "../utils/indoorRoute";
+
+import {
+  getDeviceCoordinates,
+  isInsideCampus,
+  convertGpsToCampus,
+} from "../utils/geoUtils";
 
 /* =========================================================
    3D INLINE COMPONENTS (CAMPUS)
@@ -219,6 +228,7 @@ const CampusViewer3DInternal = ({
   campusRoads = [],
   onOpenBuilding,
   hideLabels = false,
+  currentLocation = null,
 }) => {
   const bounds = useMemo(() => {
     let w = 1400;
@@ -242,7 +252,7 @@ const CampusViewer3DInternal = ({
   }, [buildings, campusElements]);
 
   return (
-    <div className="w-full h-full min-h-[380px] sm:min-h-[500px] lg:min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
+    <div className="w-full h-full min-h-[300px] sm:min-h-[500px] bg-slate-950 relative overflow-hidden rounded-2xl flex-1">
       <Canvas
         shadows
         camera={{
@@ -297,13 +307,38 @@ const CampusViewer3DInternal = ({
           />
         ))}
 
+        {currentLocation && (
+          <group
+            position={[Number(currentLocation.x), 16, Number(currentLocation.y)]}
+            renderOrder={1001}
+          >
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 2, 0]}>
+              <ringGeometry args={[14, 28, 32]} />
+              <meshBasicMaterial color="#3B82F6" transparent opacity={0.5} depthTest={false} />
+            </mesh>
+            <mesh>
+              <sphereGeometry args={[9, 20, 20]} />
+              <meshStandardMaterial color="#2563EB" emissive="#1D4ED8" emissiveIntensity={1.2} />
+            </mesh>
+            <Html position={[0, 22, 0]} center distanceFactor={900}>
+              <div className="rounded-full border-2 border-white bg-blue-600 px-3 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-2xl whitespace-nowrap">
+                {currentLocation.name}
+              </div>
+            </Html>
+          </group>
+        )}
+
         <OrbitControls
           enableDamping
           dampingFactor={0.08}
           minDistance={100}
           maxDistance={5000}
           maxPolarAngle={Math.PI / 2.05}
-          target={[bounds.width / 2, 0, bounds.height / 2]}
+          target={[
+            currentLocation ? Number(currentLocation.x) : bounds.width / 2,
+            0,
+            currentLocation ? Number(currentLocation.y) : bounds.height / 2,
+          ]}
         />
       </Canvas>
 
@@ -324,7 +359,7 @@ const CampusViewer3DInternal = ({
 };
 
 /* =========================================================
-   3D FLOOR VIEWER (DYNAMIC & RESPONSIVE)
+   3D FLOOR VIEWER
 ========================================================= */
 
 const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
@@ -434,7 +469,7 @@ const Floor3DViewer = ({
   const cameraDist = Math.max(bounds.width, bounds.depth);
 
   return (
-    <div className="w-full h-full min-h-[380px] sm:min-h-[500px] lg:min-h-[600px] bg-slate-950 relative overflow-hidden rounded-2xl">
+    <div className="w-full h-full min-h-[300px] sm:min-h-[500px] bg-slate-950 relative overflow-hidden rounded-2xl flex-1">
       <Canvas
         shadows
         camera={{
@@ -595,6 +630,11 @@ const MapPage = () => {
   const [showIndoorDirections, setShowIndoorDirections] = useState(false);
   const [indoorRoute, setIndoorRoute] = useState(null);
 
+  // CURRENT LIVE LOCATION STATES
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState("");
+
   const mapCanvasRef = useRef(null);
 
   useEffect(() => {
@@ -633,6 +673,74 @@ const MapPage = () => {
       return matchesSearch && matchesCategory;
     });
   }, [locations, search, category]);
+
+  // -------------------------------------------------------------
+  // DYNAMIC MAIN GATE FINDER (Searches DB locations for "main gate")
+  // -------------------------------------------------------------
+  const getDynamicMainGate = () => {
+    const gateLocation = (Array.isArray(locations) ? locations : []).find(
+      (loc) => loc.name?.toLowerCase().includes("main gate") || loc.category === "gate"
+    );
+    if (gateLocation) {
+      return {
+        _id: gateLocation._id,
+        name: gateLocation.name || "Main Gate",
+        x: Number(gateLocation.x || 150),
+        y: Number(gateLocation.y || 750),
+        isCurrentLocation: true,
+      };
+    }
+
+    return {
+      _id: "default-fallback-main-gate",
+      name: "Main Gate",
+      x: 200,
+      y: 750,
+      isCurrentLocation: true,
+    };
+  };
+
+  // SMART GPS / LIVE CURRENT LOCATION HANDLER
+  const handleLocateMe = async () => {
+    setLocating(true);
+    setLocationNotice("");
+
+    try {
+      const coords = await getDeviceCoordinates();
+      const inside = isInsideCampus(coords.lat, coords.lng);
+
+      if (inside) {
+        // User is inside College Campus -> Real GPS Position
+        const campusPos = convertGpsToCampus(coords.lat, coords.lng);
+        const livePos = {
+          _id: "user-current-gps",
+          name: "My Live Location",
+          x: campusPos.x,
+          y: campusPos.y,
+          isCurrentLocation: true,
+        };
+
+        setCurrentLocation(livePos);
+        setLocationNotice("Live location pinpointed on campus!");
+      } else {
+        // User is outside or GPS is off -> Fallback to Main Gate location
+        const dynamicMainGate = getDynamicMainGate();
+        setCurrentLocation(dynamicMainGate);
+        setLocationNotice(
+          `You are outside the campus. Starting point set to '${dynamicMainGate.name}'.`
+        );
+      }
+    } catch (err) {
+      console.warn("GPS error, applying Main Gate fallback:", err.message);
+      const dynamicMainGate = getDynamicMainGate();
+      setCurrentLocation(dynamicMainGate);
+      setLocationNotice(
+        `Unable to retrieve GPS, starting point set to '${dynamicMainGate.name}'.`
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleLocationClick = (location) => {
     dispatch(setSelectedLocation(location));
@@ -685,7 +793,7 @@ const MapPage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-slate-50">
+      <div className="flex h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
           <p className="text-sm font-medium text-slate-600">
@@ -698,7 +806,7 @@ const MapPage = () => {
 
   if (error) {
     return (
-      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-slate-50 p-6">
+      <div className="flex h-screen items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
             !
@@ -719,61 +827,93 @@ const MapPage = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden bg-slate-50 relative">
+    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-slate-50 relative">
       {/* RESPONSIVE HEADER */}
-      <div className="shrink-0 border-b border-slate-200 bg-white">
-        <div className="px-3.5 py-3 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Title & Icon */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <Navigation size={20} />
+      <div className="shrink-0 border-b border-slate-200 bg-white z-20">
+        <div className="px-3 py-2.5 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+            {/* Title & Mobile Button */}
+            <div className="flex items-center justify-between lg:justify-start gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <Navigation size={18} />
+                </div>
+                <div>
+                  <h1 className="text-base sm:text-xl font-bold text-slate-900 leading-tight">
+                    Campus Map
+                  </h1>
+                  <p className="text-[10px] sm:text-xs text-slate-500">
+                    Explore buildings, roads and locations
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
-                  Campus Map
-                </h1>
-                <p className="text-[11px] sm:text-xs text-slate-500">
-                  Explore buildings, roads and campus locations
-                </p>
-              </div>
+
+              {/* MOBILE LOCATE ME BUTTON */}
+              <button
+                type="button"
+                onClick={handleLocateMe}
+                disabled={locating}
+                className="flex lg:hidden items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 shadow-sm transition active:scale-95 disabled:opacity-50"
+              >
+                {locating ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <LocateFixed size={13} />
+                )}
+                <span>{locating ? "..." : "My Location"}</span>
+              </button>
             </div>
 
-            {/* Filter & View Controls */}
+            {/* Filter, View Mode & Desktop Locate Me Controls */}
             {!selectedFloorForView && (
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* 2D / 3D Toggle */}
                 <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
                   <button
                     type="button"
                     onClick={() => setViewMode("2d")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-bold transition ${
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
                       viewMode === "2d"
                         ? "bg-white text-blue-600 shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     <MapIcon size={14} />
-                    <span>2D Map</span>
+                    <span>2D</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setViewMode("3d")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-bold transition ${
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
                       viewMode === "3d"
                         ? "bg-blue-600 text-white shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     <Boxes size={14} />
-                    <span>3D View</span>
+                    <span>3D</span>
                   </button>
                 </div>
 
+                {/* DESKTOP LOCATE ME BUTTON */}
+                <button
+                  type="button"
+                  onClick={handleLocateMe}
+                  disabled={locating}
+                  className="hidden lg:flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-600 shadow-sm transition hover:bg-blue-100 active:scale-95 disabled:opacity-50"
+                >
+                  {locating ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <LocateFixed size={14} />
+                  )}
+                  <span>{locating ? "Locating..." : "My Location"}</span>
+                </button>
+
                 {/* Search Bar */}
-                <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] sm:w-60">
+                <div className="relative flex-1 min-w-[130px] sm:w-48">
                   <Search
-                    size={15}
+                    size={14}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                   <input
@@ -781,20 +921,20 @@ const MapPage = () => {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search location..."
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 sm:py-2 pl-8 sm:pl-9 pr-3 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
                   />
                 </div>
 
                 {/* Category Dropdown */}
-                <div className="relative shrink-0 w-28 sm:w-36">
+                <div className="relative shrink-0 w-28 sm:w-32">
                   <SlidersHorizontal
-                    size={14}
+                    size={13}
                     className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-1.5 sm:py-2 pl-7 pr-6 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-7 pr-6 text-xs text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
                   >
                     {categories.map((item) => (
                       <option key={item} value={item}>
@@ -809,9 +949,26 @@ const MapPage = () => {
         </div>
       </div>
 
-      {/* MAP VIEWPORT WRAPPER */}
-      <div className="min-h-0 flex-1 w-full p-2 sm:p-3 lg:p-4">
-        <div className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* LOCATION NOTIFICATION BANNER */}
+      {locationNotice && (
+        <div className="mx-3 sm:mx-6 mt-2 flex items-center justify-between rounded-xl bg-blue-50/90 border border-blue-200 px-3 py-2 text-xs font-medium text-blue-800 shadow-sm z-20 shrink-0">
+          <div className="flex items-center gap-2">
+            <Info size={14} className="shrink-0 text-blue-600" />
+            <span>{locationNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLocationNotice("")}
+            className="text-slate-400 hover:text-slate-600 ml-2"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* MAP VIEWPORT WRAPPER - FLEX FILL TO PREVENT OVERFLOW ON MOBILE */}
+      <div className="flex-1 min-h-0 w-full p-2 sm:p-4 overflow-hidden flex flex-col">
+        <div className="relative flex-1 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col">
           {selectedFloorForView ? (
             <Floor3DViewer
               building={activeBuildingForFloors || buildings.find(b => b._id === selectedFloorForView.buildingId)}
@@ -830,6 +987,7 @@ const MapPage = () => {
               campusElements={campusElements}
               onOpenBuilding={handleOpenBuilding}
               hideLabels={Boolean(activeBuildingForFloors)}
+              currentLocation={currentLocation}
             />
           ) : (
             <CampusMap
@@ -848,12 +1006,13 @@ const MapPage = () => {
               handleOpenBuilding={handleOpenBuilding}
               readOnly={true}
               fitToContainer={true}
+              currentLocation={currentLocation}
             />
           )}
 
           {/* LOCATION DETAILS PANEL */}
           {selectedLocation && !selectedFloorForView && (
-            <div className="absolute right-3 top-3 sm:right-4 sm:top-4 z-[3000] w-[300px] sm:w-[320px] max-w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[85%] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4 z-[3000] w-[280px] sm:w-[320px] max-w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[85%] overflow-y-auto">
               <div className="flex items-start justify-between border-b border-slate-100 p-3.5 sm:p-4">
                 <div className="min-w-0 pr-3">
                   <div className="mb-1 inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-600">
