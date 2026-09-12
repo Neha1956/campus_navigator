@@ -14,7 +14,8 @@ import Campus3DMapPage from "../pages/Campus3DMap";
 import AdminCampusBuilder from "../pages/admin/AdminCampusBuilder";
 import AdminLogin from "../pages/admin/AdminLogin";
 import ProtectedRoute from "../utils/ProtectedRoute";
-
+import UserFeedback from "../pages/UserFeedback";
+import AdminFeedbackPage from "../pages/admin/AdminFeedbackPage";
 const AppRoutes = () => {
   return (
     <Routes>
@@ -25,6 +26,7 @@ const AppRoutes = () => {
       <Route path="/locations/:id" element={<LocationDetailsPage />} />
       <Route path="/directions" element={<Directions />} />
       <Route path="/admin/login" element={<AdminLogin />} />
+       <Route path="/userfeedback" element={<UserFeedback />} />
 
       {/* Protected Admin Routes */}
       <Route
@@ -83,6 +85,16 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+       <Route
+        path="/adminfeedback"
+        element={
+          <ProtectedRoute>
+            <AdminFeedbackPage />
+          </ProtectedRoute>
+        }
+      />
+    
+
     </Routes>
   );
 };
