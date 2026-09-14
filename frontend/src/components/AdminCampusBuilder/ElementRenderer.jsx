@@ -60,12 +60,6 @@ const ElementRenderer = ({
       let newX = startX + deltaX;
       let newY = startY + deltaY;
 
-      const maxX = Math.max(0, Number(floorWidth) - width);
-      const maxY = Math.max(0, Number(floorHeight) - height);
-
-      newX = Math.max(0, Math.min(newX, maxX));
-      newY = Math.max(0, Math.min(newY, maxY));
-
       handleElementMove?.(element, newX, newY);
     };
 
@@ -75,12 +69,6 @@ const ElementRenderer = ({
 
       let finalX = startX + deltaX;
       let finalY = startY + deltaY;
-
-      const maxX = Math.max(0, Number(floorWidth) - width);
-      const maxY = Math.max(0, Number(floorHeight) - height);
-
-      finalX = Math.max(0, Math.min(finalX, maxX));
-      finalY = Math.max(0, Math.min(finalY, maxY));
 
       handleElementMoveEnd?.(element, Math.round(finalX), Math.round(finalY));
 
@@ -144,29 +132,6 @@ const ElementRenderer = ({
         newY = resizeData.startY + deltaY;
       }
 
-      if (newWidth < MIN_WIDTH) {
-        if (resizeData.direction === "sw" || resizeData.direction === "nw") {
-          newX = resizeData.startX + resizeData.startWidth - MIN_WIDTH;
-        }
-        newWidth = MIN_WIDTH;
-      }
-
-      if (newHeight < MIN_HEIGHT) {
-        if (resizeData.direction === "ne" || resizeData.direction === "nw") {
-          newY = resizeData.startY + resizeData.startHeight - MIN_HEIGHT;
-        }
-        newHeight = MIN_HEIGHT;
-      }
-
-      newX = Math.max(0, newX);
-      newY = Math.max(0, newY);
-
-      const maxWidth = Number(floorWidth) - newX;
-      if (newWidth > maxWidth) newWidth = maxWidth;
-
-      const maxHeight = Number(floorHeight) - newY;
-      if (newHeight > maxHeight) newHeight = maxHeight;
-
       newWidth = Math.max(MIN_WIDTH, newWidth);
       newHeight = Math.max(MIN_HEIGHT, newHeight);
 
@@ -214,17 +179,6 @@ const ElementRenderer = ({
         finalY = resizeData.startY + deltaY;
       }
 
-      finalWidth = Math.max(MIN_WIDTH, finalWidth);
-      finalHeight = Math.max(MIN_HEIGHT, finalHeight);
-
-      finalX = Math.max(0, finalX);
-      finalY = Math.max(0, finalY);
-
-      const maxWidth = Number(floorWidth) - finalX;
-      const maxHeight = Number(floorHeight) - finalY;
-
-      finalWidth = Math.min(finalWidth, maxWidth);
-      finalHeight = Math.min(finalHeight, maxHeight);
       finalWidth = Math.max(MIN_WIDTH, finalWidth);
       finalHeight = Math.max(MIN_HEIGHT, finalHeight);
 

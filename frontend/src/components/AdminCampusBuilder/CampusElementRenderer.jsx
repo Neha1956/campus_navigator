@@ -174,8 +174,8 @@ const CampusElementRenderer = ({
     const dy = svgPoint.y - start.mouseY;
 
     setPreviewPosition({
-      x: Math.max(0, start.elementX + dx),
-      y: Math.max(0, start.elementY + dy),
+      x: start.elementX + dx,
+      y: start.elementY + dy,
     });
   };
 
@@ -197,8 +197,8 @@ const CampusElementRenderer = ({
       const matrix = svg.getScreenCTM()?.inverse();
       if (matrix) {
         const svgPoint = point.matrixTransform(matrix);
-        finalX = Math.max(0, Math.round(start.elementX + svgPoint.x - start.mouseX));
-        finalY = Math.max(0, Math.round(start.elementY + svgPoint.y - start.mouseY));
+        finalX = Math.round(start.elementX + svgPoint.x - start.mouseX);
+        finalY = Math.round(start.elementY + svgPoint.y - start.mouseY);
       }
     }
 

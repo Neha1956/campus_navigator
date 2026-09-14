@@ -178,10 +178,12 @@ const BuildingRenderer = ({
       dragPosition?.y,
       originalY
     );
-const rotation = toNumber(
-  building?.rotation,
-  0
-);
+
+  const rotation = toNumber(
+    building?.rotation,
+    0
+  );
+
   /* =========================================================
      COLOR
   ========================================================= */
@@ -321,18 +323,12 @@ const rotation = toNumber(
           data.mouseY;
 
         const newX =
-          Math.max(
-            0,
-            data.buildingX +
-              dx
-          );
+          data.buildingX +
+          dx;
 
         const newY =
-          Math.max(
-            0,
-            data.buildingY +
-              dy
-          );
+          data.buildingY +
+          dy;
 
         setDragPosition({
           x: newX,
@@ -410,19 +406,13 @@ const rotation = toNumber(
         const finalPosition =
           {
             x: Math.round(
-              Math.max(
-                0,
-                data.buildingX +
-                  dx
-              )
+              data.buildingX +
+                dx
             ),
 
             y: Math.round(
-              Math.max(
-                0,
-                data.buildingY +
-                  dy
-              )
+              data.buildingY +
+                dy
             ),
 
             z: originalZ,

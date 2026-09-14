@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
+import { X } from "lucide-react";
 
 import CampusMap from "../../components/AdminCampusBuilder/CampusMap";
 import { fetchBuildings } from "../../redux/slices/buildingSlice";
@@ -32,7 +33,7 @@ const AddLocationMap = () => {
   const [form, setForm] = useState({
     name: "",
     category: "Building",
-    building: "", // Default empty rakha hai taaki bina select kiye blank rahe
+    building: "",
     buildingId: "",
     floor: 0,
     floorId: "",
@@ -46,6 +47,7 @@ const AddLocationMap = () => {
   const [coords, setCoords] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   const availableCategories = React.useMemo(() => {
@@ -97,6 +99,20 @@ const AddLocationMap = () => {
         x: selectedLocation.x ?? 50,
         y: selectedLocation.y ?? 50,
       });
+
+      // Robust extraction of all existing images
+      const rawImages = [];
+      if (Array.isArray(selectedLocation.images)) rawImages.push(...selectedLocation.images);
+      if (Array.isArray(selectedLocation.img)) rawImages.push(...selectedLocation.img);
+      if (selectedLocation.image) rawImages.push(selectedLocation.image);
+      if (selectedLocation.img && typeof selectedLocation.img === "string") rawImages.push(selectedLocation.img);
+
+      const normalizedImages = rawImages
+        .filter(Boolean)
+        .map((img) => (typeof img === "string" ? img : img.url))
+        .filter(Boolean);
+
+      setExistingImages([...new Set(normalizedImages)]);
     }
   }, [isEditMode, selectedLocation, availableCategories]);
 
@@ -151,6 +167,14 @@ const AddLocationMap = () => {
     event.target.value = "";
   };
 
+  const handleRemoveExistingImage = (targetUrl) => {
+    setExistingImages((prev) => prev.filter((img) => img !== targetUrl));
+  };
+
+  const handleRemoveNewFile = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!coords) {
@@ -174,9 +198,12 @@ const AddLocationMap = () => {
     formData.append("x", String(coords.x));
     formData.append("y", String(coords.y));
 
+    existingImages.forEach((img) => {
+      formData.append("existingImages", img);
+    });
+
     if (selectedFiles.length) {
-      formData.append("image", selectedFiles[0]);
-      selectedFiles.slice(1).forEach((file) => {
+      selectedFiles.forEach((file) => {
         formData.append("images", file);
       });
     }
@@ -200,6 +227,7 @@ const AddLocationMap = () => {
         setCoords(null);
         setSelectedFiles([]);
         setPreviewUrls([]);
+        setExistingImages([]);
 
         alert(isEditMode ? "Location updated successfully!" : "Location added successfully!");
         navigate(isEditMode ? "/admin/manage-locations" : "/locations");
@@ -280,8 +308,8 @@ const AddLocationMap = () => {
                 }}
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
               >
-                {availableCategories.map((cat) => (
-                  <option key={cat} value={cat}>
+                {availableCategories.map((cat, idx) => (
+                  <option key={`cat-${idx}-${cat}`} value={cat}>
                     {cat}
                   </option>
                 ))}
@@ -353,15 +381,41 @@ const AddLocationMap = () => {
             />
           </div>
 
-          {selectedFiles.length > 0 && (
+          {(existingImages.length > 0 || selectedFiles.length > 0) && (
             <div className="grid grid-cols-3 gap-3">
-              {selectedFiles.slice(0, 6).map((file, index) => (
-                <div key={`${file.name}-${file.size}-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+              {existingImages.map((imgUrl) => (
+                <div key={`existing-${imgUrl}`} className="relative group overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <img
+                    src={imgUrl}
+                    alt="Existing location"
+                    className="h-20 w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveExistingImage(imgUrl)}
+                    className="absolute right-1 top-1 rounded-lg bg-red-600 p-1 text-white shadow hover:bg-red-700"
+                    title="Remove image"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+
+              {selectedFiles.map((file, index) => (
+                <div key={`new-${file.name}-${index}`} className="relative group overflow-hidden rounded-xl border border-blue-200 bg-blue-50">
                   <img
                     src={previewUrls[index]}
                     alt={file.name}
                     className="h-20 w-full object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveNewFile(index)}
+                    className="absolute right-1 top-1 rounded-lg bg-red-600 p-1 text-white shadow hover:bg-red-700"
+                    title="Remove image"
+                  >
+                    <X size={12} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -378,7 +432,7 @@ const AddLocationMap = () => {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             )}
-            {submitting ? "Adding location..." : "Save Location"}
+            {submitting ? "Saving location..." : "Save Location"}
           </button>
         </form>
       </div>

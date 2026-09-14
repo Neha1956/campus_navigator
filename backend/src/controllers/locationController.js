@@ -138,7 +138,7 @@ export const getLocationById = async (req, res) => {
 };
 
 
-// UPDATE LOCATION
+/// UPDATE LOCATION
 export const updateLocation = async (req, res) => {
   try {
     const {
@@ -150,6 +150,7 @@ export const updateLocation = async (req, res) => {
       x,
       y,
       icon,
+      existingImages, // Frontend se bache hue purane image URLs ki array yahan aayegi
     } = req.body;
 
     const location = await Location.findById(req.params.id);
@@ -170,16 +171,34 @@ export const updateLocation = async (req, res) => {
     location.y = y !== undefined ? Number(y) : location.y;
     location.icon = icon ?? location.icon;
 
+    // 1. Purane retained images ki list process karein
+    let retainedImages = [];
+    if (existingImages) {
+      retainedImages = Array.isArray(existingImages) ? existingImages : [existingImages];
+    }
+
+    // 2. Naye uploaded files process karein
     const uploadedFiles = [
       ...(req.files?.images || []),
       ...(req.files?.image || []),
     ];
 
-    if (uploadedFiles.length) {
-      const { image, images } = normalizeLocationImages(uploadedFiles);
-      location.image = image;
-      location.images = images;
+    let newImageUrls = [];
+    if (uploadedFiles.length > 0) {
+      const normalized = normalizeLocationImages(uploadedFiles);
+      if (normalized.images && normalized.images.length > 0) {
+        newImageUrls = normalized.images;
+      } else if (normalized.image) {
+        newImageUrls = [normalized.image];
+      }
     }
+
+    // 3. Purane aur naye images ko combine karein
+    const finalImages = [...retainedImages, ...newImageUrls];
+
+    // 4. Location images aur primary image set karein
+    location.images = finalImages;
+    location.image = finalImages.length > 0 ? finalImages[0] : null;
 
     await location.save();
 
@@ -198,7 +217,6 @@ export const updateLocation = async (req, res) => {
     });
   }
 };
-
 
 // DELETE LOCATION
 export const deleteLocation = async (req, res) => {
