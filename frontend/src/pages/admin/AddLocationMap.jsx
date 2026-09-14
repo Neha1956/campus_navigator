@@ -12,6 +12,7 @@ import {
   addLocation,
   editLocation,
   fetchLocationById,
+  fetchLocations,
   clearSelectedLocation,
 } from "../../redux/slices/locationSlice";
 
@@ -22,6 +23,7 @@ const AddLocationMap = () => {
   const mapCanvasRef = useRef(null);
   const isEditMode = Boolean(id);
   const { selectedLocation } = useSelector((state) => state.locations);
+  const { locations = [] } = useSelector((state) => state.locations);
   const { buildings = [] } = useSelector((state) => state.buildings || {});
   const { roads = [] } = useSelector((state) => state.roads || {});
   const { floors = [] } = useSelector((state) => state.floors || {});
@@ -57,6 +59,7 @@ const AddLocationMap = () => {
     dispatch(fetchBuildings());
     dispatch(fetchRoads());
     dispatch(fetchCampusElements());
+    dispatch(fetchLocations());
 
     if (isEditMode && id) {
       dispatch(fetchLocationById(id));
@@ -116,6 +119,17 @@ const AddLocationMap = () => {
     if (!point) return;
     setCoords({ x: Number(point.x), y: Number(point.y) });
   };
+
+  const mapLocations = [
+    ...locations.filter((location) => location._id !== selectedLocation?._id),
+    ...(coords
+      ? [{
+          _id: "draft-location",
+          ...coords,
+          name: isEditMode ? form.name || "Selected location" : "Selected location",
+        }]
+      : []),
+  ];
 
   const handleFileChange = (event) => {
     const incomingFiles = Array.from(event.target.files || []);
@@ -216,7 +230,7 @@ const AddLocationMap = () => {
               buildings={buildings}
               campusRoads={roads}
               campusElements={campusElements}
-              locations={coords ? [{ _id: "draft-location", ...coords, name: "Selected location" }] : []}
+              locations={mapLocations}
               selectedLocation={coords ? { _id: "draft-location" } : null}
               onMapPointSelected={handleMapPointSelected}
               fitToContainer={true}

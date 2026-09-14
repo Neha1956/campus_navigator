@@ -68,6 +68,70 @@ const safeNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
+const getLocationImage = (location) => {
+  const image = location?.image || location?.images?.[0];
+  return typeof image === "string" ? image : image?.url || "";
+};
+
+const getLocationForMapItem = (item, locations, referenceField) => {
+  const itemId = item?._id || item?.id;
+  const itemX = safeNumber(item?.position?.x ?? item?.x);
+  const itemY = safeNumber(item?.position?.y ?? item?.y);
+  const itemWidth = Math.max(0, safeNumber(item?.dimensions?.width ?? item?.width, 0));
+  const itemHeight = Math.max(0, safeNumber(item?.dimensions?.height ?? item?.height, 0));
+
+  return locations.find((location) => {
+    const reference = location?.[referenceField];
+    const referenceId = typeof reference === "object" ? reference?._id : reference;
+    const hasMatchingId = referenceId && String(referenceId) === String(itemId);
+    const locationX = safeNumber(location?.x, -1);
+    const locationY = safeNumber(location?.y, -1);
+    const isInsideItem =
+      itemWidth > 0 &&
+      itemHeight > 0 &&
+      locationX >= itemX &&
+      locationX <= itemX + itemWidth &&
+      locationY >= itemY &&
+      locationY <= itemY + itemHeight;
+
+    return Boolean(getLocationImage(location)) && (hasMatchingId || isInsideItem);
+  });
+};
+
+const LocationImageOverlay = ({ location, x, y, width, height, onOpen }) => {
+  const image = getLocationImage(location);
+  if (!image) return null;
+
+  return (
+    <g
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        onOpen?.();
+      }}
+      style={{ cursor: onOpen ? "pointer" : "default" }}
+    >
+      <foreignObject
+        x={x}
+        y={y}
+        width={Math.max(1, width)}
+        height={Math.max(1, height)}
+        pointerEvents={onOpen ? "auto" : "none"}
+      >
+        <img
+          src={image}
+          alt={location.name || "Location"}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </foreignObject>
+    </g>
+  );
+};
+
 /* =========================================================
    3D DRAGGABLE WRAPPER
 ========================================================= */
@@ -1297,6 +1361,7 @@ const CampusMap = ({
                   {mapLocations.map((location) => {
                     const isSelected = selectedLocation?._id === location._id;
                     const pinColor = isSelected ? "#2563eb" : "#ef4444";
+                    const locationImage = getLocationImage(location);
 
                     return (
                       <g
@@ -1324,7 +1389,22 @@ const CampusMap = ({
                           stroke="#ffffff"
                           strokeWidth="2"
                         />
-                        <circle r="7" fill="#ffffff" />
+                        {locationImage ? (
+                          <foreignObject x="-10" y="-10" width="20" height="20">
+                            <img
+                              src={locationImage}
+                              alt=""
+                              style={{
+                                width: "20px",
+                                height: "20px",
+                                objectFit: "cover",
+                                borderRadius: "50%",
+                              }}
+                            />
+                          </foreignObject>
+                        ) : (
+                          <circle r="7" fill="#ffffff" />
+                        )}
                         <text
                           x="0"
                           y="38"
@@ -1435,22 +1515,41 @@ const CampusMap = ({
 
               <g data-layer="campus-elements">
                 {(Array.isArray(campusElements) ? campusElements : []).map(
-                  (element) => (
-                    <CampusElementRenderer
-                      key={element._id}
-                      element={element}
-                      selected={selectedCampusElement?._id === element._id}
-                      onSelect={
-                        readOnly ? undefined : handleCampusElementSelect
-                      }
-                      onDragEnd={
-                        readOnly ? undefined : handleCampusElementDragEnd
-                      }
-                      onResizeEnd={
-                        readOnly ? undefined : handleCampusElementResizeEnd
-                      }
-                    />
-                  )
+                  (element) => {
+                    const imageLocation = readOnly
+                      ? getLocationForMapItem(element, mapLocations, "mapElementId")
+                      : null;
+
+                    if (imageLocation) {
+                      return (
+                        <LocationImageOverlay
+                          key={element._id}
+                          location={imageLocation}
+                          x={Number(element.position?.x) || 0}
+                          y={Number(element.position?.y) || 0}
+                          width={Number(element.dimensions?.width) || 200}
+                          height={Number(element.dimensions?.height) || 120}
+                        />
+                      );
+                    }
+
+                    return (
+                      <CampusElementRenderer
+                        key={element._id}
+                        element={element}
+                        selected={selectedCampusElement?._id === element._id}
+                        onSelect={
+                          readOnly ? undefined : handleCampusElementSelect
+                        }
+                        onDragEnd={
+                          readOnly ? undefined : handleCampusElementDragEnd
+                        }
+                        onResizeEnd={
+                          readOnly ? undefined : handleCampusElementResizeEnd
+                        }
+                      />
+                    );
+                  }
                 )}
               </g>
 
@@ -1460,6 +1559,23 @@ const CampusMap = ({
                   const isSelected =
                     selectedBuilding?._id === buildingId ||
                     selectedBuilding?.id === buildingId;
+                  const imageLocation = readOnly
+                    ? getLocationForMapItem(building, mapLocations, "buildingId")
+                    : null;
+
+                  if (imageLocation) {
+                    return (
+                      <LocationImageOverlay
+                        key={buildingId}
+                        location={imageLocation}
+                        x={Number(building.position?.x) || 0}
+                        y={Number(building.position?.y) || 0}
+                        width={Number(building.dimensions?.width) || 250}
+                        height={Number(building.dimensions?.height) || 180}
+                        onOpen={() => handleOpenBuilding?.(building)}
+                      />
+                    );
+                  }
 
                   return (
                     <BuildingRenderer
