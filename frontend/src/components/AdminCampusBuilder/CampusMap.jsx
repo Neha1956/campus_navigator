@@ -33,6 +33,7 @@ const ELEMENT_COLORS = {
 
 const MAP_EXTRA_PADDING = 400;
 const MAP_GROWTH_STEP = 400;
+const MAP_VIEW_PADDING = 200;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
@@ -66,6 +67,70 @@ const normalizeBuilding = (building) => {
 const safeNumber = (value, fallback = 0) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+};
+
+const getLocationImage = (location) => {
+  const image = location?.image || location?.images?.[0];
+  return typeof image === "string" ? image : image?.url || "";
+};
+
+const getLocationForMapItem = (item, locations, referenceField) => {
+  const itemId = item?._id || item?.id;
+  const itemX = safeNumber(item?.position?.x ?? item?.x);
+  const itemY = safeNumber(item?.position?.y ?? item?.y);
+  const itemWidth = Math.max(0, safeNumber(item?.dimensions?.width ?? item?.width, 0));
+  const itemHeight = Math.max(0, safeNumber(item?.dimensions?.height ?? item?.height, 0));
+
+  return locations.find((location) => {
+    const reference = location?.[referenceField];
+    const referenceId = typeof reference === "object" ? reference?._id : reference;
+    const hasMatchingId = referenceId && String(referenceId) === String(itemId);
+    const locationX = safeNumber(location?.x, -1);
+    const locationY = safeNumber(location?.y, -1);
+    const isInsideItem =
+      itemWidth > 0 &&
+      itemHeight > 0 &&
+      locationX >= itemX &&
+      locationX <= itemX + itemWidth &&
+      locationY >= itemY &&
+      locationY <= itemY + itemHeight;
+
+    return Boolean(getLocationImage(location)) && (hasMatchingId || isInsideItem);
+  });
+};
+
+const LocationImageOverlay = ({ location, x, y, width, height, onOpen }) => {
+  const image = getLocationImage(location);
+  if (!image) return null;
+
+  return (
+    <g
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        onOpen?.();
+      }}
+      style={{ cursor: onOpen ? "pointer" : "default" }}
+    >
+      <foreignObject
+        x={x}
+        y={y}
+        width={Math.max(1, width)}
+        height={Math.max(1, height)}
+        pointerEvents={onOpen ? "auto" : "none"}
+      >
+        <img
+          src={image}
+          alt={location.name || "Location"}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </foreignObject>
+    </g>
+  );
 };
 
 /* =========================================================
@@ -355,6 +420,8 @@ const CampusViewer3DCanvas = ({
   activeTool,
   readOnly,
   currentLocation,
+  minX = 0,
+  minY = 0,
 }) => {
   const [orbitEnabled, setOrbitEnabled] = useState(true);
 
@@ -363,7 +430,7 @@ const CampusViewer3DCanvas = ({
       <Canvas
         shadows
         camera={{
-          position: [mapWidth * 0.75, 800, mapHeight * 0.95],
+          position: [minX + mapWidth * 0.75, 800, minY + mapHeight * 0.95],
           fov: 45,
           near: 1,
           far: 20000,
@@ -371,7 +438,7 @@ const CampusViewer3DCanvas = ({
       >
         <ambientLight intensity={1.5} />
         <directionalLight
-          position={[mapWidth * 0.5, 1200, mapHeight * 0.5]}
+          position={[minX + mapWidth * 0.5, 1200, minY + mapHeight * 0.5]}
           intensity={2.2}
           castShadow
         />
@@ -379,7 +446,7 @@ const CampusViewer3DCanvas = ({
 
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[mapWidth / 2, -1, mapHeight / 2]}
+          position={[minX + mapWidth / 2, -1, minY + mapHeight / 2]}
           receiveShadow
           onClick={(e) => {
             e.stopPropagation();
@@ -400,7 +467,7 @@ const CampusViewer3DCanvas = ({
           sectionThickness={1.2}
           fadeDistance={4000}
           fadeStrength={1}
-          position={[mapWidth / 2, 0.2, mapHeight / 2]}
+          position={[minX + mapWidth / 2, 0.2, minY + mapHeight / 2]}
         />
 
         {campusRoads.map((road) => (
@@ -436,7 +503,6 @@ const CampusViewer3DCanvas = ({
           />
         ))}
 
-        {/* GOOGLE MAPS STYLE 3D BLUE PIN */}
         {currentLocation && (
           <group position={[Number(currentLocation.x), 18, Number(currentLocation.y)]} renderOrder={1001}>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 2, 0]}>
@@ -463,9 +529,9 @@ const CampusViewer3DCanvas = ({
           maxDistance={5000}
           maxPolarAngle={Math.PI / 2.05}
           target={[
-            currentLocation ? Number(currentLocation.x) : mapWidth / 2,
+            currentLocation ? Number(currentLocation.x) : minX + mapWidth / 2,
             0,
-            currentLocation ? Number(currentLocation.y) : mapHeight / 2,
+            currentLocation ? Number(currentLocation.y) : minY + mapHeight / 2,
           ]}
         />
       </Canvas>
@@ -540,7 +606,6 @@ const CampusMap = ({
   const roadResizePreviewRef = useRef(null);
   const [roadResizePreview, setRoadResizePreview] = useState(null);
 
-  // Active current location marker resolved from props
   const activeCurrentLoc = currentLocation || (sourceLocation?.isCurrentLocation ? sourceLocation : null);
 
   const normalizedBuildings = useMemo(() => {
@@ -600,16 +665,21 @@ const CampusMap = ({
     points.map((point) => `${Number(point.x)},${Number(point.y)}`).join(" ");
 
   const dynamicCampusSize = useMemo(() => {
-    let requiredWidth = safeNumber(campusWidth, 1400);
-    let requiredHeight = safeNumber(campusHeight, 900);
+    let minX = 0;
+    let minY = 0;
+    let maxX = safeNumber(campusWidth, 1400);
+    let maxY = safeNumber(campusHeight, 900);
 
     normalizedBuildings.forEach((building) => {
       const x = safeNumber(building?.position?.x ?? building?.x);
       const y = safeNumber(building?.position?.y ?? building?.y);
       const width = Math.max(0, safeNumber(building?.dimensions?.width ?? building?.width, 250));
       const height = Math.max(0, safeNumber(building?.dimensions?.height ?? building?.height, 180));
-      requiredWidth = Math.max(requiredWidth, x + width + MAP_EXTRA_PADDING);
-      requiredHeight = Math.max(requiredHeight, y + height + MAP_EXTRA_PADDING);
+      
+      minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+      minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+      maxX = Math.max(maxX, x + width + MAP_EXTRA_PADDING);
+      maxY = Math.max(maxY, y + height + MAP_EXTRA_PADDING);
     });
 
     (Array.isArray(campusElements) ? campusElements : []).forEach((element) => {
@@ -617,8 +687,11 @@ const CampusMap = ({
       const y = safeNumber(element?.position?.y);
       const width = Math.max(0, safeNumber(element?.dimensions?.width, 150));
       const height = Math.max(0, safeNumber(element?.dimensions?.height, 100));
-      requiredWidth = Math.max(requiredWidth, x + width + MAP_EXTRA_PADDING);
-      requiredHeight = Math.max(requiredHeight, y + height + MAP_EXTRA_PADDING);
+
+      minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+      minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+      maxX = Math.max(maxX, x + width + MAP_EXTRA_PADDING);
+      maxY = Math.max(maxY, y + height + MAP_EXTRA_PADDING);
     });
 
     (Array.isArray(campusRoads) ? campusRoads : []).forEach((road) => {
@@ -626,43 +699,58 @@ const CampusMap = ({
       points.forEach((point) => {
         const x = safeNumber(point?.x);
         const y = safeNumber(point?.y);
-        requiredWidth = Math.max(requiredWidth, x + MAP_EXTRA_PADDING);
-        requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
+        minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+        minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+        maxX = Math.max(maxX, x + MAP_EXTRA_PADDING);
+        maxY = Math.max(maxY, y + MAP_EXTRA_PADDING);
       });
     });
 
     (Array.isArray(locations) ? locations : []).forEach((location) => {
       const x = safeNumber(location?.x);
       const y = safeNumber(location?.y);
-      requiredWidth = Math.max(requiredWidth, x + MAP_EXTRA_PADDING);
-      requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
+      minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+      minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+      maxX = Math.max(maxX, x + MAP_EXTRA_PADDING);
+      maxY = Math.max(maxY, y + MAP_EXTRA_PADDING);
     });
 
     (Array.isArray(routeLocations) ? routeLocations : []).forEach((location) => {
       const x = safeNumber(location?.x);
       const y = safeNumber(location?.y);
-      requiredWidth = Math.max(requiredWidth, x + MAP_EXTRA_PADDING);
-      requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
+      minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+      minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+      maxX = Math.max(maxX, x + MAP_EXTRA_PADDING);
+      maxY = Math.max(maxY, y + MAP_EXTRA_PADDING);
     });
 
     (Array.isArray(routePath) ? routePath : []).forEach((point) => {
       const x = safeNumber(point?.x);
       const y = safeNumber(point?.y);
-      requiredWidth = Math.max(requiredWidth, x + MAP_EXTRA_PADDING);
-      requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
+      minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+      minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+      maxX = Math.max(maxX, x + MAP_EXTRA_PADDING);
+      maxY = Math.max(maxY, y + MAP_EXTRA_PADDING);
     });
 
     if (activeCurrentLoc) {
       const x = safeNumber(activeCurrentLoc.x);
       const y = safeNumber(activeCurrentLoc.y);
-      requiredWidth = Math.max(requiredWidth, x + MAP_EXTRA_PADDING);
-      requiredHeight = Math.max(requiredHeight, y + MAP_EXTRA_PADDING);
+      minX = Math.min(minX, x - MAP_EXTRA_PADDING);
+      minY = Math.min(minY, y - MAP_EXTRA_PADDING);
+      maxX = Math.max(maxX, x + MAP_EXTRA_PADDING);
+      maxY = Math.max(maxY, y + MAP_EXTRA_PADDING);
     }
 
-    const finalWidth = Math.ceil(requiredWidth / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
-    const finalHeight = Math.ceil(requiredHeight / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
+    minX = Math.floor(minX / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
+    minY = Math.floor(minY / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
+
+    const finalWidth = Math.ceil((maxX - minX) / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
+    const finalHeight = Math.ceil((maxY - minY) / MAP_GROWTH_STEP) * MAP_GROWTH_STEP;
 
     return {
+      minX,
+      minY,
       width: Math.max(campusWidth, finalWidth),
       height: Math.max(campusHeight, finalHeight),
     };
@@ -678,8 +766,14 @@ const CampusMap = ({
     activeCurrentLoc,
   ]);
 
+  const mapMinX = dynamicCampusSize.minX;
+  const mapMinY = dynamicCampusSize.minY;
   const mapWidth = dynamicCampusSize.width;
   const mapHeight = dynamicCampusSize.height;
+
+  // Total absolute canvas dimensions including negative offsets for container scrolling
+  const totalWidth = mapWidth + Math.abs(mapMinX);
+  const totalHeight = mapHeight + Math.abs(mapMinY);
 
   const clampZoom = (value) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 
@@ -892,8 +986,8 @@ const CampusMap = ({
 
     const updatedPoints = data.originalPoints.map((point) => ({ ...point }));
     updatedPoints[data.endpointIndex] = {
-      x: Math.max(0, Math.round(svgPoint.x)),
-      y: Math.max(0, Math.round(svgPoint.y)),
+      x: Math.round(svgPoint.x),
+      y: Math.round(svgPoint.y),
     };
 
     const preview = {
@@ -1030,6 +1124,8 @@ const CampusMap = ({
             mapHeight={mapHeight}
             activeTool={activeTool}
             currentLocation={activeCurrentLoc}
+            minX={mapMinX}
+            minY={mapMinY}
           />
         </div>
       ) : (
@@ -1053,10 +1149,10 @@ const CampusMap = ({
           <div
             className="relative"
             style={{
-              width: `${mapWidth * zoom}px`,
-              height: `${mapHeight * zoom}px`,
-              minWidth: `${mapWidth * zoom}px`,
-              minHeight: `${mapHeight * zoom}px`,
+              width: `${totalWidth * zoom}px`,
+              height: `${totalHeight * zoom}px`,
+              minWidth: `${totalWidth * zoom}px`,
+              minHeight: `${totalHeight * zoom}px`,
               backgroundImage: gridBackground,
               backgroundColor: "#f8fafc",
             }}
@@ -1064,14 +1160,14 @@ const CampusMap = ({
             <svg
               ref={campusCanvasRef}
               data-campus-map="true"
-              width={mapWidth * zoom}
-              height={mapHeight * zoom}
-              viewBox={`0 0 ${mapWidth} ${mapHeight}`}
+              width={totalWidth * zoom}
+              height={totalHeight * zoom}
+              viewBox={`${mapMinX} ${mapMinY} ${mapWidth} ${mapHeight}`}
               preserveAspectRatio="none"
               className="block"
               style={{
-                width: `${mapWidth * zoom}px`,
-                height: `${mapHeight * zoom}px`,
+                width: `${totalWidth * zoom}px`,
+                height: `${totalHeight * zoom}px`,
                 overflow: "visible",
                 cursor:
                   !readOnly && CAMPUS_ELEMENT_TYPES.includes(activeTool)
@@ -1102,8 +1198,8 @@ const CampusMap = ({
               </defs>
 
               <rect
-                x="0"
-                y="0"
+                x={mapMinX}
+                y={mapMinY}
                 width={mapWidth}
                 height={mapHeight}
                 fill={mapView === "3d" ? "#eef2f7" : "#f8fafc"}
@@ -1111,8 +1207,8 @@ const CampusMap = ({
               />
 
               <rect
-                x="20"
-                y="20"
+                x={mapMinX + 20}
+                y={mapMinY + 20}
                 width={Math.max(0, mapWidth - 40)}
                 height={Math.max(0, mapHeight - 40)}
                 rx="24"
@@ -1186,6 +1282,7 @@ const CampusMap = ({
                           strokeWidth={Math.max(2, width * 0.12)}
                           strokeDasharray="12 10"
                           strokeLinecap="round"
+                          strokeLinejoin="round"
                           pointerEvents="none"
                         />
                         <text
@@ -1297,6 +1394,7 @@ const CampusMap = ({
                   {mapLocations.map((location) => {
                     const isSelected = selectedLocation?._id === location._id;
                     const pinColor = isSelected ? "#2563eb" : "#ef4444";
+                    const locationImage = getLocationImage(location);
 
                     return (
                       <g
@@ -1324,7 +1422,22 @@ const CampusMap = ({
                           stroke="#ffffff"
                           strokeWidth="2"
                         />
-                        <circle r="7" fill="#ffffff" />
+                        {locationImage ? (
+                          <foreignObject x="-10" y="-10" width="20" height="20">
+                            <img
+                              src={locationImage}
+                              alt=""
+                              style={{
+                                width: "20px",
+                                height: "20px",
+                                objectFit: "cover",
+                                borderRadius: "50%",
+                              }}
+                            />
+                          </foreignObject>
+                        ) : (
+                          <circle r="7" fill="#ffffff" />
+                        )}
                         <text
                           x="0"
                           y="38"
@@ -1359,9 +1472,6 @@ const CampusMap = ({
                 </g>
               )}
 
-              {/* =========================================================
-                  GOOGLE MAPS STYLE LIVE LOCATION PIN (SVG 2D)
-              ========================================================= */}
               {activeCurrentLoc && (
                 <g
                   transform={`translate(${Number(activeCurrentLoc.x)}, ${Number(
@@ -1369,7 +1479,6 @@ const CampusMap = ({
                   )})`}
                   style={{ pointerEvents: "none" }}
                 >
-                  {/* Outer Pulsing Aura */}
                   <circle
                     r="32"
                     fill="#3b82f6"
@@ -1378,7 +1487,6 @@ const CampusMap = ({
                   />
                   <circle r="20" fill="#3b82f6" opacity="0.2" />
 
-                  {/* Google Maps Style Blue Pin Body */}
                   <path
                     d="M0,-32 C-12,-32 -22,-22 -22,-10 C-22,6 0,28 0,32 C0,28 22,6 22,-10 C22,-22 12,-32 0,-32 Z"
                     fill="#2563eb"
@@ -1386,10 +1494,8 @@ const CampusMap = ({
                     strokeWidth="3"
                     filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.3))"
                   />
-                  {/* Center White Dot on Pin */}
                   <circle r="7" fill="#ffffff" cy="-10" />
 
-                  {/* "YOU ARE HERE" Floating Banner */}
                   <g transform="translate(0, -42)">
                     <rect
                       x="-60"
@@ -1435,22 +1541,41 @@ const CampusMap = ({
 
               <g data-layer="campus-elements">
                 {(Array.isArray(campusElements) ? campusElements : []).map(
-                  (element) => (
-                    <CampusElementRenderer
-                      key={element._id}
-                      element={element}
-                      selected={selectedCampusElement?._id === element._id}
-                      onSelect={
-                        readOnly ? undefined : handleCampusElementSelect
-                      }
-                      onDragEnd={
-                        readOnly ? undefined : handleCampusElementDragEnd
-                      }
-                      onResizeEnd={
-                        readOnly ? undefined : handleCampusElementResizeEnd
-                      }
-                    />
-                  )
+                  (element) => {
+                    const imageLocation = readOnly
+                      ? getLocationForMapItem(element, mapLocations, "mapElementId")
+                      : null;
+
+                    if (imageLocation) {
+                      return (
+                        <LocationImageOverlay
+                          key={element._id}
+                          location={imageLocation}
+                          x={Number(element.position?.x) || 0}
+                          y={Number(element.position?.y) || 0}
+                          width={Number(element.dimensions?.width) || 200}
+                          height={Number(element.dimensions?.height) || 120}
+                        />
+                      );
+                    }
+
+                    return (
+                      <CampusElementRenderer
+                        key={element._id}
+                        element={element}
+                        selected={selectedCampusElement?._id === element._id}
+                        onSelect={
+                          readOnly ? undefined : handleCampusElementSelect
+                        }
+                        onDragEnd={
+                          readOnly ? undefined : handleCampusElementDragEnd
+                        }
+                        onResizeEnd={
+                          readOnly ? undefined : handleCampusElementResizeEnd
+                        }
+                      />
+                    );
+                  }
                 )}
               </g>
 
@@ -1460,6 +1585,23 @@ const CampusMap = ({
                   const isSelected =
                     selectedBuilding?._id === buildingId ||
                     selectedBuilding?.id === buildingId;
+                  const imageLocation = readOnly
+                    ? getLocationForMapItem(building, mapLocations, "buildingId")
+                    : null;
+
+                  if (imageLocation) {
+                    return (
+                      <LocationImageOverlay
+                        key={buildingId}
+                        location={imageLocation}
+                        x={Number(building.position?.x) || 0}
+                        y={Number(building.position?.y) || 0}
+                        width={Number(building.dimensions?.width) || 250}
+                        height={Number(building.dimensions?.height) || 180}
+                        onOpen={() => handleOpenBuilding?.(building)}
+                      />
+                    );
+                  }
 
                   return (
                     <BuildingRenderer
@@ -1537,8 +1679,8 @@ const CampusMap = ({
                 campusRoads.length === 0 && (
                   <g pointerEvents="none">
                     <rect
-                      x={mapWidth / 2 - 180}
-                      y={mapHeight / 2 - 90}
+                      x={mapMinX + mapWidth / 2 - 180}
+                      y={mapMinY + mapHeight / 2 - 90}
                       width="360"
                       height="180"
                       rx="20"
@@ -1547,8 +1689,8 @@ const CampusMap = ({
                       stroke="#cbd5e1"
                     />
                     <foreignObject
-                      x={mapWidth / 2 - 25}
-                      y={mapHeight / 2 - 60}
+                      x={mapMinX + mapWidth / 2 - 25}
+                      y={mapMinY + mapHeight / 2 - 60}
                       width="50"
                       height="50"
                     >
@@ -1557,8 +1699,8 @@ const CampusMap = ({
                       </div>
                     </foreignObject>
                     <text
-                      x={mapWidth / 2}
-                      y={mapHeight / 2 + 10}
+                      x={mapMinX + mapWidth / 2}
+                      y={mapMinY + mapHeight / 2 + 10}
                       textAnchor="middle"
                       fontSize="18"
                       fontWeight="700"
@@ -1567,8 +1709,8 @@ const CampusMap = ({
                       Campus Map
                     </text>
                     <text
-                      x={mapWidth / 2}
-                      y={mapHeight / 2 + 38}
+                      x={mapMinX + mapWidth / 2}
+                      y={mapMinY + mapHeight / 2 + 38}
                       textAnchor="middle"
                       fontSize="13"
                       fill="#64748b"
@@ -1582,7 +1724,6 @@ const CampusMap = ({
         </div>
       )}
 
-      {/* RESPONSIVE ZOOM CONTROLS */}
       {fitToContainer && !is3D && (
         <div className="absolute right-2.5 top-2.5 sm:right-4 sm:top-4 z-[2500] flex items-center gap-0.5 sm:gap-1 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-1 sm:p-1.5 shadow-lg">
           <button

@@ -68,7 +68,7 @@ const ELEMENT_COLORS = {
   lift: "#67E8F9",
 };
 
-const Building3D = ({ building, onOpen, hideLabels }) => {
+const Building3D = ({ building, onOpen, hideLabels, highlighted }) => {
   const position = building.position || {};
   const dimensions = building.dimensions || {};
 
@@ -81,18 +81,24 @@ const Building3D = ({ building, onOpen, hideLabels }) => {
   const y = height / 2;
 
   const rotation = (Number(building.rotation || 0) * Math.PI) / 180;
-  const color = building.color || "#93C5FD";
+  const color = highlighted ? "#F59E0B" : building.color || "#93C5FD";
 
   return (
     <group position={[x, y, z]} rotation={[0, -rotation, 0]}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.4} metalness={0.1} />
+        <meshStandardMaterial
+          color={color}
+          roughness={0.4}
+          metalness={0.1}
+          emissive={highlighted ? "#FBBF24" : "#000000"}
+          emissiveIntensity={highlighted ? 0.7 : 0}
+        />
       </mesh>
 
       <lineSegments>
         <edgesGeometry args={[new THREE.BoxGeometry(width, height, depth)]} />
-        <lineBasicMaterial color="#334155" linewidth={1} />
+        <lineBasicMaterial color={highlighted ? "#FDE68A" : "#334155"} linewidth={highlighted ? 3 : 1} />
       </lineSegments>
 
       {!hideLabels && (
@@ -122,7 +128,7 @@ const Building3D = ({ building, onOpen, hideLabels }) => {
   );
 };
 
-const CampusElement3D = ({ element, hideLabels }) => {
+const CampusElement3D = ({ element, hideLabels, highlighted }) => {
   const position = element.position || {};
   const dimensions = element.dimensions || {};
 
@@ -134,7 +140,7 @@ const CampusElement3D = ({ element, hideLabels }) => {
   const z = Number(position.y || 0) + depth / 2;
   const y = height / 2;
 
-  const color = element.color || ELEMENT_COLORS[element.type] || "#CBD5E1";
+  const color = highlighted ? "#F59E0B" : element.color || ELEMENT_COLORS[element.type] || "#CBD5E1";
 
   return (
     <group position={[x, y, z]}>
@@ -167,7 +173,19 @@ const CampusElement3D = ({ element, hideLabels }) => {
       ) : (
         <mesh receiveShadow castShadow>
           <boxGeometry args={[width, height, depth]} />
-          <meshStandardMaterial color={color} roughness={0.7} />
+          <meshStandardMaterial
+            color={color}
+            roughness={0.7}
+            emissive={highlighted ? "#FBBF24" : "#000000"}
+            emissiveIntensity={highlighted ? 0.8 : 0}
+          />
+        </mesh>
+      )}
+
+      {highlighted && (
+        <mesh position={[0, height / 2 + 3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[Math.max(width, depth) * 0.45, Math.max(width, depth) * 0.5, 32]} />
+          <meshBasicMaterial color="#FBBF24" transparent opacity={0.9} />
         </mesh>
       )}
 
@@ -229,6 +247,8 @@ const CampusViewer3DInternal = ({
   onOpenBuilding,
   hideLabels = false,
   currentLocation = null,
+  highlightedBuildingId = null,
+  highlightedElementId = null,
 }) => {
   const bounds = useMemo(() => {
     let w = 1400;
@@ -295,7 +315,12 @@ const CampusViewer3DInternal = ({
         ))}
 
         {campusElements.map((el) => (
-          <CampusElement3D key={el._id} element={el} hideLabels={hideLabels} />
+          <CampusElement3D
+            key={el._id}
+            element={el}
+            hideLabels={hideLabels}
+            highlighted={String(highlightedElementId) === String(el._id)}
+          />
         ))}
 
         {buildings.map((b) => (
@@ -304,6 +329,7 @@ const CampusViewer3DInternal = ({
             building={b}
             onOpen={onOpenBuilding}
             hideLabels={hideLabels}
+            highlighted={String(highlightedBuildingId) === String(b._id)}
           />
         ))}
 
@@ -624,11 +650,13 @@ const MapPage = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [viewMode, setViewMode] = useState("3d");
+  const [highlightedMapItem, setHighlightedMapItem] = useState(null);
 
   const [activeBuildingForFloors, setActiveBuildingForFloors] = useState(null);
   const [selectedFloorForView, setSelectedFloorForView] = useState(null);
   const [showIndoorDirections, setShowIndoorDirections] = useState(false);
   const [indoorRoute, setIndoorRoute] = useState(null);
+  const [floorElementSearch, setFloorElementSearch] = useState("");
 
   // CURRENT LIVE LOCATION STATES
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -657,8 +685,41 @@ const MapPage = () => {
         locations.map((location) => location.category).filter(Boolean)
       ),
     ];
-    return ["All", ...uniqueCategories];
-  }, [locations]);
+    const elementTypes = campusElements.map((element) => element.type).filter(Boolean);
+    return ["All", "Buildings", ...new Set([...uniqueCategories, ...elementTypes])];
+  }, [campusElements, locations]);
+
+  const mapSearchMatch = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const matchesCategory = (item) =>
+      category === "All" ||
+      (category === "Buildings" && buildings.includes(item)) ||
+      item.category === category ||
+      item.type === category;
+    if (!query && category === "All") return null;
+
+    const building = buildings.find((item) =>
+      matchesCategory(item) &&
+      (!query || `${item.name || ""} ${item.description || ""}`.toLowerCase().includes(query))
+    );
+    if (building) return { type: "building", item: building };
+
+    const element = campusElements.find((item) =>
+      matchesCategory(item) &&
+      (!query || `${item.name || ""} ${item.type || ""}`.toLowerCase().includes(query))
+    );
+    if (element) return { type: "element", item: element };
+
+    const location = locations.find((item) =>
+      matchesCategory(item) &&
+      (!query || `${item.name || ""} ${item.description || ""}`.toLowerCase().includes(query))
+    );
+    return location ? { type: "location", item: location } : null;
+  }, [buildings, campusElements, category, locations, search]);
+
+  useEffect(() => {
+    setHighlightedMapItem(mapSearchMatch);
+  }, [mapSearchMatch]);
 
   const filteredLocations = useMemo(() => {
     return locations.filter((location) => {
@@ -773,7 +834,32 @@ const MapPage = () => {
     dispatch(fetchMapElementsByFloor(floor._id));
     setSelectedFloorForView(floor);
     setActiveBuildingForFloors(null);
+    setFloorElementSearch("");
   };
+
+  const floorElementResults = useMemo(() => {
+    const query = floorElementSearch.trim().toLowerCase();
+    if (!query) return [];
+
+    return floors.flatMap((floor) =>
+      (Array.isArray(floor.mapElements) ? floor.mapElements : [])
+        .filter((element) => {
+          const searchableText = [
+            element.name,
+            element.type,
+            element.roomNumber,
+            floor.name,
+            floor.floorNumber,
+          ]
+            .filter((value) => value !== undefined && value !== null)
+            .join(" ")
+            .toLowerCase();
+
+          return searchableText.includes(query);
+        })
+        .map((element) => ({ element, floor }))
+    );
+  }, [floorElementSearch, floors]);
 
   const handleIndoorRoute = (route) => {
     const destinationFloor = floors.find((floor) => floor._id === route.floorId);
@@ -988,6 +1074,8 @@ const MapPage = () => {
               onOpenBuilding={handleOpenBuilding}
               hideLabels={Boolean(activeBuildingForFloors)}
               currentLocation={currentLocation}
+              highlightedBuildingId={highlightedMapItem?.type === "building" ? highlightedMapItem.item._id : null}
+              highlightedElementId={highlightedMapItem?.type === "element" ? highlightedMapItem.item._id : null}
             />
           ) : (
             <CampusMap
@@ -1000,6 +1088,8 @@ const MapPage = () => {
               buildings={buildings}
               campusRoads={roads}
               campusElements={campusElements}
+              selectedBuilding={highlightedMapItem?.type === "building" ? highlightedMapItem.item : null}
+              selectedCampusElement={highlightedMapItem?.type === "element" ? highlightedMapItem.item : null}
               locations={filteredLocations}
               selectedLocation={selectedLocation}
               onLocationClick={handleLocationClick}
@@ -1133,33 +1223,76 @@ const MapPage = () => {
                   No floors created for this building yet.
                 </div>
               ) : (
-                floors.map((floor) => (
-                  <button
-                    key={floor._id}
-                    type="button"
-                    onClick={() => handleSelectFloor(floor)}
-                    className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/60 transition group shadow-sm text-left active:scale-[0.99]"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:bg-blue-600 group-hover:text-white transition shrink-0">
-                        {floor.floorNumber ?? "F"}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-blue-700 transition truncate">
-                          {floor.name}
-                        </h4>
-                        <p className="text-[10px] sm:text-[11px] text-slate-400">
-                          Floor {floor.floorNumber}
-                        </p>
-                      </div>
-                    </div>
+                <>
+                  <div className="relative mb-3">
+                    <Search
+                      size={15}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                      type="search"
+                      value={floorElementSearch}
+                      onChange={(event) => setFloorElementSearch(event.target.value)}
+                      placeholder="Search class or room..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
 
-                    <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-blue-600 shrink-0">
-                      <span>View 3D</span>
-                      <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                  {floorElementSearch.trim() ? (
+                    <div className="space-y-2">
+                      {floorElementResults.length ? (
+                        floorElementResults.map(({ element, floor }) => (
+                          <button
+                            key={`${floor._id}-${element._id}`}
+                            type="button"
+                            onClick={() => handleSelectFloor(floor)}
+                            className="w-full rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                          >
+                            <p className="truncate text-xs sm:text-sm font-semibold text-slate-800">
+                              {element.name || element.roomNumber || "Unnamed room"}
+                            </p>
+                            <p className="mt-1 text-[10px] sm:text-[11px] text-blue-700">
+                              {floor.name} (Floor {floor.floorNumber ?? 0})
+                              {element.type ? ` • ${element.type}` : ""}
+                            </p>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">
+                          No matching class or room found.
+                        </div>
+                      )}
                     </div>
-                  </button>
-                ))
+                  ) : (
+                    floors.map((floor) => (
+                      <button
+                        key={floor._id}
+                        type="button"
+                        onClick={() => handleSelectFloor(floor)}
+                        className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/60 transition group shadow-sm text-left active:scale-[0.99]"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:bg-blue-600 group-hover:text-white transition shrink-0">
+                            {floor.floorNumber ?? "F"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-blue-700 transition truncate">
+                              {floor.name}
+                            </h4>
+                            <p className="text-[10px] sm:text-[11px] text-slate-400">
+                              Floor {floor.floorNumber}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-blue-600 shrink-0">
+                          <span>View 3D</span>
+                          <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </>
               )}
             </div>
 

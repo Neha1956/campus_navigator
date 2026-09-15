@@ -17,14 +17,14 @@ const App = () => {
           setSidebarOpen={setSidebarOpen}
         />
 
-        <div className="flex">
+        <div className="flex min-w-0 overflow-x-hidden">
 
           <Sidebar
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
           />
 
-          <main className="min-h-screen flex-1">
+          <main className="min-h-screen min-w-0 flex-1 overflow-x-hidden">
             <AppRoutes />
           </main>
 

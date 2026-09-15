@@ -16,7 +16,11 @@ export const createLocation = async (data) => {
 };
 
 export const updateLocation = async (id, data) => {
-  const response = await api.put(`/locations/${id}`, data);
+  const response = await api.put(`/locations/${id}`, data, {
+    headers: {
+      ...(data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {}),
+    },
+  });
   return response.data;
 };
 

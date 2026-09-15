@@ -6,6 +6,7 @@ import {
   X,
   Home,
   LogOut,
+  MessageSquareHeart
 } from "lucide-react";
 
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -123,6 +124,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                 <Navigation size={19} />
                 <span>Directions</span>
               </NavLink>
+              <NavLink
+  to={isAuthenticated ? "/adminfeedback" : "/userfeedback"}
+  onClick={() => setSidebarOpen(false)}
+  className={getSidebarClass(isAuthenticated ? "/adminfeedback" : "/userfeedback")}
+>
+  <MessageSquareHeart size={19} />
+  <span>{isAuthenticated ? "Feedback & Reviews" : "Feedback"}</span>
+</NavLink>
             </nav>
           </div>
 

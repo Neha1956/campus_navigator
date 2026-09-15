@@ -67,6 +67,11 @@ const getLocationColor = (category) => {
   }
 };
 
+const getLocationImage = (location) => {
+  const image = location?.image || location?.images?.[0];
+  return typeof image === "string" ? image : image?.url || "";
+};
+
 const CampusMap = ({
   locations = [],
   routes = [],
@@ -229,6 +234,7 @@ const CampusMap = ({
             const Icon = getIcon(location.category);
             const color = getLocationColor(location.category);
             const isSelected = selectedLocation?._id === location._id;
+            const locationImage = getLocationImage(location);
 
             return (
               <g
@@ -263,16 +269,26 @@ const CampusMap = ({
                   }}
                 />
 
-                {/* Icon Wrapper */}
-                <foreignObject x="-13" y="-13" width="26" height="26">
-                  <div
-                    xmlns="http://www.w3.org/1999/xhtml"
-                    className="flex h-6 w-6 items-center justify-center transition-transform group-hover:scale-110"
-                    style={{ color }}
-                  >
-                    <Icon size={20} />
-                  </div>
-                </foreignObject>
+                {/* Location Image or Icon */}
+                {locationImage ? (
+                  <foreignObject x="-21" y="-21" width="42" height="42">
+                    <img
+                      src={locationImage}
+                      alt=""
+                      className="h-[42px] w-[42px] rounded-xl object-cover transition-transform duration-200 group-hover:scale-110"
+                    />
+                  </foreignObject>
+                ) : (
+                  <foreignObject x="-13" y="-13" width="26" height="26">
+                    <div
+                      xmlns="http://www.w3.org/1999/xhtml"
+                      className="flex h-6 w-6 items-center justify-center transition-transform group-hover:scale-110"
+                      style={{ color }}
+                    >
+                      <Icon size={20} />
+                    </div>
+                  </foreignObject>
+                )}
 
                 {/* Location Label Badge */}
                 <g className="transition-opacity duration-200">

@@ -10,6 +10,7 @@ import mapElementRoutes from "./routes/mapElementRoutes.js";
 import roadRoutes from "./routes/roadRoutes.js";
 import campusElementRoutes from "./routes/campusElementRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
 const app = express();
 
 const corsOptions = {
@@ -67,4 +68,5 @@ app.use(
   campusElementRoutes
 );
 app.use("/api/auth", authRoutes);
+app.use("/api/feedback", feedbackRoutes);
 export default app;

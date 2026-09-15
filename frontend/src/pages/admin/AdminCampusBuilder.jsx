@@ -857,8 +857,8 @@ const AdminCampusBuilder = () => {
     const rect = floorCanvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = snapToGrid(event.clientX - rect.left);
-    const y = snapToGrid(event.clientY - rect.top);
+    const x = snapToGrid(event.clientX - rect.left - 250);
+    const y = snapToGrid(event.clientY - rect.top - 250);
 
     const defaultColors = {
       room: "#86EFAC",
