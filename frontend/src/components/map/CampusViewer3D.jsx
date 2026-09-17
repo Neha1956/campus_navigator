@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -26,6 +27,16 @@ const COLORS = {
 };
 
 /* =========================================================
+   MOBILE PERFORMANCE DETECTION
+   Only affects rendering quality.
+   Functionality remains unchanged.
+========================================================= */
+
+const isMobileDevice =
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 768px)").matches;
+
+/* =========================================================
    HELPER
 ========================================================= */
 
@@ -45,7 +56,9 @@ const getDimensions = (element) => {
   return {
     width: Number(dimensions.width || 100),
     height: Number(dimensions.height || 20),
-    depth: Number(dimensions.depth || dimensions.height || 80),
+    depth: Number(
+      dimensions.depth || dimensions.height || 80
+    ),
   };
 };
 
@@ -75,7 +88,11 @@ const Element3D = ({ element, selected, onSelect }) => {
       }}
     >
       {/* MAIN OBJECT */}
-      <mesh castShadow receiveShadow>
+
+      <mesh
+        castShadow={!isMobileDevice}
+        receiveShadow={!isMobileDevice}
+      >
         <boxGeometry
           args={[
             dimensions.width,
@@ -83,6 +100,7 @@ const Element3D = ({ element, selected, onSelect }) => {
             dimensions.depth,
           ]}
         />
+
         <meshStandardMaterial
           color={color}
           transparent
@@ -91,6 +109,7 @@ const Element3D = ({ element, selected, onSelect }) => {
       </mesh>
 
       {/* BORDER */}
+
       <lineSegments>
         <edgesGeometry
           args={[
@@ -101,6 +120,7 @@ const Element3D = ({ element, selected, onSelect }) => {
             ),
           ]}
         />
+
         <lineBasicMaterial
           color={selected ? "#2563EB" : "#475569"}
           linewidth={selected ? 3 : 1}
@@ -108,6 +128,7 @@ const Element3D = ({ element, selected, onSelect }) => {
       </lineSegments>
 
       {/* SELECTED BORDER */}
+
       {selected && (
         <mesh>
           <boxGeometry
@@ -117,15 +138,21 @@ const Element3D = ({ element, selected, onSelect }) => {
               dimensions.depth + 8,
             ]}
           />
-          <meshBasicMaterial color="#2563EB" wireframe />
+
+          <meshBasicMaterial
+            color="#2563EB"
+            wireframe
+          />
         </mesh>
       )}
 
       {/* NAME */}
+
       <Html
         position={[0, dimensions.height / 2 + 10, 0]}
         center
         distanceFactor={500}
+        occlude={false}
       >
         <div
           className={`px-2 py-1 rounded-lg text-xs font-semibold whitespace-nowrap shadow select-none pointer-events-none ${
@@ -150,9 +177,10 @@ const FloorBase = ({ width, depth }) => {
     <mesh
       rotation={[-Math.PI / 2, 0, 0]}
       position={[width / 2, -1, depth / 2]}
-      receiveShadow
+      receiveShadow={!isMobileDevice}
     >
       <planeGeometry args={[width, depth]} />
+
       <meshStandardMaterial color="#F8FAFC" />
     </mesh>
   );
@@ -166,7 +194,12 @@ const FloorLabel = ({ floor }) => {
   if (!floor) return null;
 
   return (
-    <Html position={[0, 5, 0]} center distanceFactor={800}>
+    <Html
+      position={[0, 5, 0]}
+      center
+      distanceFactor={800}
+      occlude={false}
+    >
       <div className="bg-blue-600 text-white px-4 py-2 rounded-xl shadow-xl font-bold select-none pointer-events-none">
         {floor.name}
       </div>
@@ -187,6 +220,7 @@ const Scene = ({
 }) => {
   const baseWidth = Number(floor?.width || 1000);
   const baseDepth = Number(floor?.height || 700);
+
   const FLOOR_PADDING = 100;
 
   const dynamicFloorSize = React.useMemo(() => {
@@ -197,8 +231,11 @@ const Scene = ({
       const position = getPosition(element);
       const dimensions = getDimensions(element);
 
-      const elementRight = position.x + dimensions.width;
-      const elementBottom = position.y + dimensions.depth;
+      const elementRight =
+        position.x + dimensions.width;
+
+      const elementBottom =
+        position.y + dimensions.depth;
 
       requiredWidth = Math.max(
         requiredWidth,
@@ -214,11 +251,14 @@ const Scene = ({
     if (currentLocation) {
       requiredWidth = Math.max(
         requiredWidth,
-        Number(currentLocation.x || 0) + FLOOR_PADDING
+        Number(currentLocation.x || 0) +
+          FLOOR_PADDING
       );
+
       requiredDepth = Math.max(
         requiredDepth,
-        Number(currentLocation.y || 0) + FLOOR_PADDING
+        Number(currentLocation.y || 0) +
+          FLOOR_PADDING
       );
     }
 
@@ -226,22 +266,44 @@ const Scene = ({
       width: requiredWidth,
       depth: requiredDepth,
     };
-  }, [elements, baseWidth, baseDepth, currentLocation]);
+  }, [
+    elements,
+    baseWidth,
+    baseDepth,
+    currentLocation,
+  ]);
 
   const width = dynamicFloorSize.width;
   const depth = dynamicFloorSize.depth;
 
   return (
     <>
-      <ambientLight intensity={1.5} />
+      {/* LIGHTING */}
+
+      <ambientLight
+        intensity={isMobileDevice ? 1.8 : 1.5}
+      />
 
       <directionalLight
         position={[500, 900, 500]}
-        intensity={2}
-        castShadow
+        intensity={isMobileDevice ? 1.5 : 2}
+        castShadow={!isMobileDevice}
+        shadow-mapSize-width={
+          isMobileDevice ? 512 : 1024
+        }
+        shadow-mapSize-height={
+          isMobileDevice ? 512 : 1024
+        }
       />
 
-      <FloorBase width={width} depth={depth} />
+      {/* FLOOR */}
+
+      <FloorBase
+        width={width}
+        depth={depth}
+      />
+
+      {/* GRID */}
 
       <Grid
         args={[width, depth]}
@@ -251,21 +313,33 @@ const Scene = ({
         sectionThickness={1}
         fadeDistance={1500}
         fadeStrength={1}
-        position={[width / 2, 0, depth / 2]}
+        position={[
+          width / 2,
+          0,
+          depth / 2,
+        ]}
       />
 
+      {/* FLOOR LABEL */}
+
       <FloorLabel floor={floor} />
+
+      {/* ELEMENTS */}
 
       {elements.map((element) => (
         <Element3D
           key={element._id}
           element={element}
-          selected={selectedElement?._id === element._id}
+          selected={
+            selectedElement?._id ===
+            element._id
+          }
           onSelect={onSelectElement}
         />
       ))}
 
-      {/* 3D CURRENT LOCATION MARKER INSIDE FLOOR */}
+      {/* 3D CURRENT LOCATION MARKER */}
+
       {currentLocation && (
         <group
           position={[
@@ -275,8 +349,18 @@ const Scene = ({
           ]}
           renderOrder={1001}
         >
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 2, 0]}>
-            <ringGeometry args={[10, 22, 32]} />
+          <mesh
+            rotation={[
+              -Math.PI / 2,
+              0,
+              0,
+            ]}
+            position={[0, 2, 0]}
+          >
+            <ringGeometry
+              args={[10, 22, 32]}
+            />
+
             <meshBasicMaterial
               color="#3B82F6"
               transparent
@@ -284,21 +368,33 @@ const Scene = ({
               depthTest={false}
             />
           </mesh>
+
           <mesh>
-            <sphereGeometry args={[7, 16, 16]} />
+            <sphereGeometry
+              args={[7, 16, 16]}
+            />
+
             <meshStandardMaterial
               color="#2563EB"
               emissive="#1D4ED8"
               emissiveIntensity={1}
             />
           </mesh>
-          <Html position={[0, 18, 0]} center distanceFactor={600}>
+
+          <Html
+            position={[0, 18, 0]}
+            center
+            distanceFactor={600}
+            occlude={false}
+          >
             <div className="rounded-full border-2 border-white bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-2xl whitespace-nowrap select-none pointer-events-none">
               You Are Here
             </div>
           </Html>
         </group>
       )}
+
+      {/* CONTROLS */}
 
       <OrbitControls
         enableDamping
@@ -322,7 +418,7 @@ const CampusViewer3D = ({
   elements = [],
   selectedElement,
   onSelectElement,
-  currentLocation = null, // Current location support
+  currentLocation = null,
 }) => {
   if (!currentFloor) {
     return (
@@ -335,7 +431,25 @@ const CampusViewer3D = ({
   return (
     <div className="w-full h-full min-h-[600px] bg-slate-950 relative">
       <Canvas
-        shadows
+        /*
+          MOBILE OPTIMIZATION
+          Desktop quality remains unchanged.
+        */
+
+        shadows={!isMobileDevice}
+
+        dpr={
+          isMobileDevice
+            ? [1, 1.25]
+            : [1, 2]
+        }
+
+        gl={{
+          antialias: !isMobileDevice,
+          powerPreference: "high-performance",
+          alpha: false,
+        }}
+
         camera={{
           position: [700, 700, 800],
           fov: 45,
@@ -343,7 +457,16 @@ const CampusViewer3D = ({
           far: 10000,
         }}
       >
-        <Environment preset="city" />
+        {/* Environment remains available.
+            Lower intensity on mobile keeps the scene
+            lighter without changing functionality. */}
+
+        <Environment
+          preset="city"
+          environmentIntensity={
+            isMobileDevice ? 0.6 : 1
+          }
+        />
 
         <Scene
           elements={elements}
@@ -354,10 +477,19 @@ const CampusViewer3D = ({
         />
       </Canvas>
 
+      {/* BUILDING / FLOOR INFO */}
+
       <div className="absolute top-4 left-4 bg-black/70 text-white rounded-xl px-4 py-3">
-        <p className="font-bold">{building?.name}</p>
-        <p className="text-sm text-gray-300">{currentFloor?.name}</p>
+        <p className="font-bold">
+          {building?.name}
+        </p>
+
+        <p className="text-sm text-gray-300">
+          {currentFloor?.name}
+        </p>
       </div>
+
+      {/* CONTROLS INFO */}
 
       <div className="absolute bottom-4 right-4 bg-white/90 rounded-xl px-4 py-3 text-xs text-gray-600 pointer-events-none select-none">
         🖱 Drag = Rotate
@@ -371,3 +503,4 @@ const CampusViewer3D = ({
 };
 
 export default CampusViewer3D;
+
