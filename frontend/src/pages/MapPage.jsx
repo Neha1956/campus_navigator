@@ -649,7 +649,7 @@ const MapPage = () => {
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
-  const [viewMode, setViewMode] = useState("3d");
+  const [viewMode, setViewMode] = useState("2d");
   const [highlightedMapItem, setHighlightedMapItem] = useState(null);
 
   const [activeBuildingForFloors, setActiveBuildingForFloors] = useState(null);

@@ -51,7 +51,10 @@ const Building3D = ({ building }) => {
 
   const width = Math.max(60, Number(dimensions.width || 250));
   const height = Math.max(40, Number(dimensions.height || 180));
-  const depth = Math.max(40, Number(dimensions.depth || dimensions.height || 180));
+  const depth = Math.max(
+    40,
+    Number(dimensions.depth || dimensions.height || 180)
+  );
 
   const x = Number(position.x || 0) + width / 2;
   const z = Number(position.y || 0) + depth / 2;
@@ -64,7 +67,11 @@ const Building3D = ({ building }) => {
     <group position={[x, y, z]} rotation={[0, -rotation, 0]}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={color} roughness={0.4} metalness={0.1} />
+        <meshStandardMaterial
+          color={color}
+          roughness={0.4}
+          metalness={0.1}
+        />
       </mesh>
 
       <lineSegments>
@@ -72,7 +79,12 @@ const Building3D = ({ building }) => {
         <lineBasicMaterial color="#334155" linewidth={1} />
       </lineSegments>
 
-      <Html position={[0, height / 2 + 15, 0]} center distanceFactor={1100} occlude>
+      <Html
+        position={[0, height / 2 + 15, 0]}
+        center
+        distanceFactor={1100}
+        occlude
+      >
         <div className="px-2.5 py-1 rounded-lg shadow-md border border-slate-200 bg-white/95 text-xs font-bold text-slate-800 whitespace-nowrap select-none pointer-events-none">
           {building.name}
         </div>
@@ -93,7 +105,8 @@ const CampusElement3D = ({ element }) => {
   const z = Number(position.y || 0) + depth / 2;
   const y = height / 2;
 
-  const color = element.color || ELEMENT_COLORS[element.type] || "#CBD5E1";
+  const color =
+    element.color || ELEMENT_COLORS[element.type] || "#CBD5E1";
 
   return (
     <group position={[x, y, z]}>
@@ -114,10 +127,12 @@ const CampusElement3D = ({ element }) => {
             <boxGeometry args={[16, 50, 16]} />
             <meshStandardMaterial color="#475569" />
           </mesh>
+
           <mesh position={[width / 2 - 10, 25, 0]} castShadow>
             <boxGeometry args={[16, 50, 16]} />
             <meshStandardMaterial color="#475569" />
           </mesh>
+
           <mesh position={[0, 50, 0]} castShadow>
             <boxGeometry args={[width + 10, 12, 20]} />
             <meshStandardMaterial color="#334155" />
@@ -130,7 +145,12 @@ const CampusElement3D = ({ element }) => {
         </mesh>
       )}
 
-      <Html position={[0, height + 8, 0]} center distanceFactor={1100} occlude>
+      <Html
+        position={[0, height + 8, 0]}
+        center
+        distanceFactor={1100}
+        occlude
+      >
         <div className="px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap shadow bg-white/90 text-slate-700 select-none pointer-events-none">
           {element.name || element.type}
         </div>
@@ -141,6 +161,7 @@ const CampusElement3D = ({ element }) => {
 
 const Road3D = ({ road }) => {
   const points = road.points || [];
+
   if (!points || points.length < 2) return null;
 
   const width = Number(road.width) || 24;
@@ -149,8 +170,10 @@ const Road3D = ({ road }) => {
     <group>
       {points.slice(0, -1).map((pt1, idx) => {
         const pt2 = points[idx + 1];
+
         const dx = Number(pt2.x) - Number(pt1.x);
         const dz = Number(pt2.y) - Number(pt1.y);
+
         const distance = Math.hypot(dx, dz);
         const angle = Math.atan2(dz, dx);
 
@@ -158,13 +181,27 @@ const Road3D = ({ road }) => {
         const midZ = (Number(pt1.y) + Number(pt2.y)) / 2;
 
         return (
-          <group key={idx} position={[midX, 1, midZ]} rotation={[0, -angle, 0]}>
+          <group
+            key={idx}
+            position={[midX, 1, midZ]}
+            rotation={[0, -angle, 0]}
+          >
             <mesh receiveShadow>
               <boxGeometry args={[distance, 2, width]} />
-              <meshStandardMaterial color={road.color || "#475569"} roughness={0.9} />
+              <meshStandardMaterial
+                color={road.color || "#475569"}
+                roughness={0.9}
+              />
             </mesh>
+
             <mesh position={[0, 1.1, 0]}>
-              <boxGeometry args={[distance * 0.9, 0.5, Math.max(2, width * 0.1)]} />
+              <boxGeometry
+                args={[
+                  distance * 0.9,
+                  0.5,
+                  Math.max(2, width * 0.1),
+                ]}
+              />
               <meshStandardMaterial color="#E2E8F0" />
             </mesh>
           </group>
@@ -178,78 +215,179 @@ const Road3D = ({ road }) => {
    3D GLOWING TUBE PATH
 ========================================================= */
 
-const DirectionPath3D = ({ routePoints = [], source, destination }) => {
+const DirectionPath3D = ({
+  routePoints = [],
+  source,
+  destination,
+}) => {
   if (!routePoints || routePoints.length < 2) return null;
 
   const curve = useMemo(() => {
     const points3D = routePoints.map(
       (p) => new THREE.Vector3(Number(p.x), 12, Number(p.y))
     );
-    return new THREE.CatmullRomCurve3(points3D, false, "catmullrom", 0.1);
+
+    return new THREE.CatmullRomCurve3(
+      points3D,
+      false,
+      "catmullrom",
+      0.1
+    );
   }, [routePoints]);
 
   return (
     <group>
       <mesh renderOrder={998}>
         <tubeGeometry args={[curve, 120, 9, 12, false]} />
-        <meshBasicMaterial color="#1E40AF" transparent opacity={0.4} depthTest={false} />
+        <meshBasicMaterial
+          color="#1E40AF"
+          transparent
+          opacity={0.4}
+          depthTest={false}
+        />
       </mesh>
 
       <mesh renderOrder={999}>
         <tubeGeometry args={[curve, 120, 5.5, 12, false]} />
-        <meshBasicMaterial color="#38BDF8" depthTest={false} />
+        <meshBasicMaterial
+          color="#38BDF8"
+          depthTest={false}
+        />
       </mesh>
 
       <mesh renderOrder={1000}>
         <tubeGeometry args={[curve, 120, 2, 8, false]} />
-        <meshBasicMaterial color="#FFFFFF" depthTest={false} />
+        <meshBasicMaterial
+          color="#FFFFFF"
+          depthTest={false}
+        />
       </mesh>
 
       {source && (
-        <group position={[Number(source.x), 0, Number(source.y)]} renderOrder={1001}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
+        <group
+          position={[
+            Number(source.x),
+            0,
+            Number(source.y),
+          ]}
+          renderOrder={1001}
+        >
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 4, 0]}
+          >
             <ringGeometry args={[14, 28, 32]} />
-            <meshBasicMaterial color="#2563EB" transparent opacity={0.7} depthTest={false} />
+            <meshBasicMaterial
+              color="#2563EB"
+              transparent
+              opacity={0.7}
+              depthTest={false}
+            />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4.2, 0]}>
+
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 4.2, 0]}
+          >
             <circleGeometry args={[12, 32]} />
-            <meshBasicMaterial color="#60A5FA" transparent opacity={0.8} depthTest={false} />
+            <meshBasicMaterial
+              color="#60A5FA"
+              transparent
+              opacity={0.8}
+              depthTest={false}
+            />
           </mesh>
+
           <mesh position={[0, 35, 0]}>
             <cylinderGeometry args={[4, 4, 70, 16]} />
-            <meshBasicMaterial color="#2563EB" transparent opacity={0.6} depthTest={false} />
+            <meshBasicMaterial
+              color="#2563EB"
+              transparent
+              opacity={0.6}
+              depthTest={false}
+            />
           </mesh>
+
           <mesh position={[0, 70, 0]}>
             <sphereGeometry args={[16, 24, 24]} />
-            <meshBasicMaterial color="#1D4ED8" depthTest={false} />
+            <meshBasicMaterial
+              color="#1D4ED8"
+              depthTest={false}
+            />
           </mesh>
-          <Html center distanceFactor={800} position={[0, 95, 0]}>
+
+          <Html
+            center
+            distanceFactor={800}
+            position={[0, 95, 0]}
+          >
             <div className="bg-blue-600 border-2 border-white text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-2xl whitespace-nowrap">
-              {source.isCurrentLocation ? "YOU ARE HERE" : `START: ${source.name}`}
+              {source.isCurrentLocation
+                ? "YOU ARE HERE"
+                : `START: ${source.name}`}
             </div>
           </Html>
         </group>
       )}
 
       {destination && (
-        <group position={[Number(destination.x), 0, Number(destination.y)]} renderOrder={1001}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4, 0]}>
+        <group
+          position={[
+            Number(destination.x),
+            0,
+            Number(destination.y),
+          ]}
+          renderOrder={1001}
+        >
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 4, 0]}
+          >
             <ringGeometry args={[14, 28, 32]} />
-            <meshBasicMaterial color="#DC2626" transparent opacity={0.7} depthTest={false} />
+            <meshBasicMaterial
+              color="#DC2626"
+              transparent
+              opacity={0.7}
+              depthTest={false}
+            />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4.2, 0]}>
+
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 4.2, 0]}
+          >
             <circleGeometry args={[12, 32]} />
-            <meshBasicMaterial color="#F87171" transparent opacity={0.8} depthTest={false} />
+            <meshBasicMaterial
+              color="#F87171"
+              transparent
+              opacity={0.8}
+              depthTest={false}
+            />
           </mesh>
+
           <mesh position={[0, 35, 0]}>
             <cylinderGeometry args={[4, 4, 70, 16]} />
-            <meshBasicMaterial color="#EF4444" transparent opacity={0.6} depthTest={false} />
+            <meshBasicMaterial
+              color="#EF4444"
+              transparent
+              opacity={0.6}
+              depthTest={false}
+            />
           </mesh>
+
           <mesh position={[0, 70, 0]}>
             <sphereGeometry args={[16, 24, 24]} />
-            <meshBasicMaterial color="#DC2626" depthTest={false} />
+            <meshBasicMaterial
+              color="#DC2626"
+              depthTest={false}
+            />
           </mesh>
-          <Html center distanceFactor={800} position={[0, 95, 0]}>
+
+          <Html
+            center
+            distanceFactor={800}
+            position={[0, 95, 0]}
+          >
             <div className="bg-red-600 border-2 border-white text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-2xl whitespace-nowrap">
               GOAL: {destination.name}
             </div>
@@ -273,20 +411,35 @@ const DirectionsViewer3D = ({
     let h = 900;
 
     buildings.forEach((b) => {
-      const bx = Number(b.position?.x || 0) + Number(b.dimensions?.width || 250);
-      const by = Number(b.position?.y || 0) + Number(b.dimensions?.height || 180);
+      const bx =
+        Number(b.position?.x || 0) +
+        Number(b.dimensions?.width || 250);
+
+      const by =
+        Number(b.position?.y || 0) +
+        Number(b.dimensions?.height || 180);
+
       w = Math.max(w, bx + 200);
       h = Math.max(h, by + 200);
     });
 
     campusElements.forEach((el) => {
-      const ex = Number(el.position?.x || 0) + Number(el.dimensions?.width || 180);
-      const ey = Number(el.position?.y || 0) + Number(el.dimensions?.height || 120);
+      const ex =
+        Number(el.position?.x || 0) +
+        Number(el.dimensions?.width || 180);
+
+      const ey =
+        Number(el.position?.y || 0) +
+        Number(el.dimensions?.height || 120);
+
       w = Math.max(w, ex + 200);
       h = Math.max(h, ey + 200);
     });
 
-    return { width: w, height: h };
+    return {
+      width: w,
+      height: h,
+    };
   }, [buildings, campusElements]);
 
   return (
@@ -294,27 +447,47 @@ const DirectionsViewer3D = ({
       <Canvas
         shadows
         camera={{
-          position: [bounds.width * 0.5, 1150, bounds.height * 0.95],
+          position: [
+            bounds.width * 0.5,
+            1150,
+            bounds.height * 0.95,
+          ],
           fov: 45,
           near: 1,
           far: 20000,
         }}
       >
         <ambientLight intensity={1.5} />
+
         <directionalLight
-          position={[bounds.width * 0.5, 1200, bounds.height * 0.5]}
+          position={[
+            bounds.width * 0.5,
+            1200,
+            bounds.height * 0.5,
+          ]}
           intensity={2.2}
           castShadow
         />
+
         <Environment preset="city" />
 
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[bounds.width / 2, -1, bounds.height / 2]}
+          position={[
+            bounds.width / 2,
+            -1,
+            bounds.height / 2,
+          ]}
           receiveShadow
         >
-          <planeGeometry args={[bounds.width, bounds.height]} />
-          <meshStandardMaterial color="#F1F5F9" roughness={0.8} />
+          <planeGeometry
+            args={[bounds.width, bounds.height]}
+          />
+
+          <meshStandardMaterial
+            color="#F1F5F9"
+            roughness={0.8}
+          />
         </mesh>
 
         <Grid
@@ -325,19 +498,32 @@ const DirectionsViewer3D = ({
           sectionThickness={1.2}
           fadeDistance={4000}
           fadeStrength={1}
-          position={[bounds.width / 2, 0.2, bounds.height / 2]}
+          position={[
+            bounds.width / 2,
+            0.2,
+            bounds.height / 2,
+          ]}
         />
 
         {roads.map((road) => (
-          <Road3D key={road._id} road={road} />
+          <Road3D
+            key={road._id}
+            road={road}
+          />
         ))}
 
         {campusElements.map((el) => (
-          <CampusElement3D key={el._id} element={el} />
+          <CampusElement3D
+            key={el._id}
+            element={el}
+          />
         ))}
 
         {buildings.map((b) => (
-          <Building3D key={b._id} building={b} />
+          <Building3D
+            key={b._id}
+            building={b}
+          />
         ))}
 
         <DirectionPath3D
@@ -352,12 +538,20 @@ const DirectionsViewer3D = ({
           minDistance={100}
           maxDistance={5000}
           maxPolarAngle={Math.PI / 2.05}
-          target={[bounds.width / 2, 0, bounds.height / 2]}
+          target={[
+            bounds.width / 2,
+            0,
+            bounds.height / 2,
+          ]}
         />
       </Canvas>
     </div>
   );
 };
+
+/* =========================================================
+   DIRECTIONS MAP
+========================================================= */
 
 const DirectionsMap = ({
   locations = [],
@@ -372,77 +566,144 @@ const DirectionsMap = ({
   const fromId = selectedRoute?.from?._id;
   const toId = selectedRoute?.to?._id;
 
-  const source = customSourceLocation || locations.find((location) => location._id === fromId);
-  const destination = locations.find((location) => location._id === toId);
+  const source =
+    customSourceLocation ||
+    locations.find(
+      (location) => location._id === fromId
+    );
+
+  const destination = locations.find(
+    (location) => location._id === toId
+  );
 
   const routePoints = useMemo(() => {
     if (!selectedRoute?.path?.length) {
       if (source && destination) {
         return [
-          { x: source.x, y: source.y },
-          { x: destination.x, y: destination.y },
+          {
+            x: source.x,
+            y: source.y,
+          },
+          {
+            x: destination.x,
+            y: destination.y,
+          },
         ];
       }
+
       return [];
     }
 
     const points = [];
 
-    selectedRoute.path.forEach((segment, index) => {
-      let start = segment.from;
-      let end = segment.to;
+    selectedRoute.path.forEach(
+      (segment, index) => {
+        let start = segment.from;
+        let end = segment.to;
 
-      if (segment.reverse) {
-        start = segment.to;
-        end = segment.from;
+        if (segment.reverse) {
+          start = segment.to;
+          end = segment.from;
+        }
+
+        if (index === 0) {
+          points.push({
+            x: start.x,
+            y: start.y,
+          });
+        }
+
+        points.push({
+          x: end.x,
+          y: end.y,
+        });
       }
-
-      if (index === 0) {
-        points.push({ x: start.x, y: start.y });
-      }
-
-      points.push({ x: end.x, y: end.y });
-    });
+    );
 
     return points;
   }, [selectedRoute, source, destination]);
 
   const routeLocations = useMemo(() => {
-    const namedRouteLocations = selectedRoute?.viaLocations || [];
-    const nearbyLocations = locations.filter((location) => {
-      return routePoints.some((point, index) => {
-        if (index === 0) return false;
-        const previousPoint = routePoints[index - 1];
-        const deltaX = point.x - previousPoint.x;
-        const deltaY = point.y - previousPoint.y;
-        const lengthSquared = deltaX ** 2 + deltaY ** 2;
-        const ratio = lengthSquared
-          ? Math.max(
-              0,
-              Math.min(
-                1,
-                ((location.x - previousPoint.x) * deltaX +
-                  (location.y - previousPoint.y) * deltaY) /
-                  lengthSquared
-              )
-            )
-          : 0;
-        const closestX = previousPoint.x + ratio * deltaX;
-        const closestY = previousPoint.y + ratio * deltaY;
-        return Math.hypot(location.x - closestX, location.y - closestY) <= 80;
-      });
-    });
+    const namedRouteLocations =
+      selectedRoute?.viaLocations || [];
 
-    const mergedLocations = [...namedRouteLocations, ...nearbyLocations];
+    const nearbyLocations = locations.filter(
+      (location) => {
+        return routePoints.some(
+          (point, index) => {
+            if (index === 0) return false;
+
+            const previousPoint =
+              routePoints[index - 1];
+
+            const deltaX =
+              point.x - previousPoint.x;
+
+            const deltaY =
+              point.y - previousPoint.y;
+
+            const lengthSquared =
+              deltaX ** 2 + deltaY ** 2;
+
+            const ratio = lengthSquared
+              ? Math.max(
+                  0,
+                  Math.min(
+                    1,
+                    ((location.x -
+                      previousPoint.x) *
+                      deltaX +
+                      (location.y -
+                        previousPoint.y) *
+                        deltaY) /
+                      lengthSquared
+                  )
+                )
+              : 0;
+
+            const closestX =
+              previousPoint.x +
+              ratio * deltaX;
+
+            const closestY =
+              previousPoint.y +
+              ratio * deltaY;
+
+            return (
+              Math.hypot(
+                location.x - closestX,
+                location.y - closestY
+              ) <= 80
+            );
+          }
+        );
+      }
+    );
+
+    const mergedLocations = [
+      ...namedRouteLocations,
+      ...nearbyLocations,
+    ];
+
     return mergedLocations.filter(
       (location, index, allLocations) =>
-        allLocations.findIndex((item) => item._id === location._id) === index
+        allLocations.findIndex(
+          (item) =>
+            item._id === location._id
+        ) === index
     );
-  }, [locations, routePoints, selectedRoute]);
+  }, [
+    locations,
+    routePoints,
+    selectedRoute,
+  ]);
 
   return (
-    <div className="relative h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-[#f8fafc] shadow-sm">
-      <div className="absolute top-4 left-4 z-[3000] flex rounded-xl bg-white/95 p-1 border border-slate-200 shadow-md backdrop-blur">
+    <div className="relative h-full min-h-[520px] rounded-2xl border border-slate-200 bg-[#f8fafc] shadow-sm">
+      {/* =====================================================
+          VIEW MODE BUTTONS
+      ===================================================== */}
+      <div className="absolute top-0 left-4 z-[300] flex rounded-xl bg-white/95 p-1 border border-slate-200 shadow-md backdrop-blur">
         <button
           type="button"
           onClick={() => setViewMode("2d")}
@@ -453,8 +714,9 @@ const DirectionsMap = ({
           }`}
         >
           <MapIcon size={14} />
-          2D Map
+          2D 
         </button>
+
         <button
           type="button"
           onClick={() => setViewMode("3d")}
@@ -465,10 +727,13 @@ const DirectionsMap = ({
           }`}
         >
           <Boxes size={14} />
-          3D View
+          3D 
         </button>
       </div>
 
+      {/* =====================================================
+          3D VIEW
+      ===================================================== */}
       {viewMode === "3d" ? (
         <DirectionsViewer3D
           buildings={buildings}
@@ -479,29 +744,46 @@ const DirectionsMap = ({
           destination={destination}
         />
       ) : (
-        <CampusMap
-          campusWidth={1400}
-          campusHeight={900}
-          showGrid={true}
-          mapView="2d"
-          activeTool="select"
-          buildings={buildings}
-          campusRoads={roads}
-          campusElements={campusElements}
-          locations={locations}
-          selectedLocation={source || destination}
-          onLocationClick={() => {}}
-          routePath={routePoints}
-          sourceLocation={source}
-          destinationLocation={destination}
-          readOnly={true}
-          fitToContainer={true}
-          routeLocations={
-            routeLocations.length > 0
-              ? routeLocations
-              : [source, destination].filter(Boolean)
-          }
-        />
+        /* ===================================================
+           FIXED 2D MAP SCROLL CONTAINER
+        =================================================== */
+        <div className="w-full h-full min-h-[520px] overflow-auto rounded-2xl">
+          <div
+            className="relative min-w-[1400px] min-h-[900px]"
+            style={{
+              width: "1400px",
+              height: "900px",
+            }}
+          >
+            <CampusMap
+              campusWidth={1400}
+              campusHeight={900}
+              showGrid={true}
+              mapView="2d"
+              activeTool="select"
+              buildings={buildings}
+              campusRoads={roads}
+              campusElements={campusElements}
+              locations={locations}
+              selectedLocation={
+                source || destination
+              }
+              onLocationClick={() => {}}
+              routePath={routePoints}
+              sourceLocation={source}
+              destinationLocation={destination}
+              readOnly={true}
+              fitToContainer={true}
+              routeLocations={
+                routeLocations.length > 0
+                  ? routeLocations
+                  : [source, destination].filter(
+                      Boolean
+                    )
+              }
+            />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -514,15 +796,29 @@ const DirectionsMap = ({
 const Directions = () => {
   const dispatch = useDispatch();
 
-  const { buildings = [] } = useSelector((state) => state.buildings || {});
-  const { roads = [] } = useSelector((state) => state.roads || {});
-  const { elements: campusElements = [] } = useSelector(
+  const { buildings = [] } = useSelector(
+    (state) => state.buildings || {}
+  );
+
+  const { roads = [] } = useSelector(
+    (state) => state.roads || {}
+  );
+
+  const {
+    elements: campusElements = [],
+  } = useSelector(
     (state) => state.campusElements || {}
   );
 
-  const { locations = [] } = useSelector((state) => state.locations);
+  const { locations = [] } = useSelector(
+    (state) => state.locations
+  );
 
-  const { selectedRoute, routeLoading, routeError } = useSelector(
+  const {
+    selectedRoute,
+    routeLoading,
+    routeError,
+  } = useSelector(
     (state) => state.routes
   );
 
@@ -530,15 +826,32 @@ const Directions = () => {
   const [to, setTo] = useState("");
   const [viewMode, setViewMode] = useState("2d");
 
-  const [locating, setLocating] = useState(false);
-  const [locationNotice, setLocationNotice] = useState("");
-  const [customSource, setCustomSource] = useState(null);
+  const [locating, setLocating] =
+    useState(false);
 
-  // DYNAMIC MAIN GATE FINDER (Searches DB locations for "main gate")
+  const [locationNotice, setLocationNotice] =
+    useState("");
+
+  const [customSource, setCustomSource] =
+    useState(null);
+
+  /* =========================================================
+     DYNAMIC MAIN GATE FINDER
+  ========================================================= */
+
   const getDynamicMainGate = () => {
-    const gateLocation = (Array.isArray(locations) ? locations : []).find(
-      (loc) => loc.name?.toLowerCase().includes("main gate") || loc.category === "gate"
+    const gateLocation = (
+      Array.isArray(locations)
+        ? locations
+        : []
+    ).find(
+      (loc) =>
+        loc.name
+          ?.toLowerCase()
+          .includes("main gate") ||
+        loc.category === "gate"
     );
+
     if (gateLocation) {
       return {
         _id: gateLocation._id,
@@ -559,12 +872,21 @@ const Directions = () => {
   };
 
   const locationOptions = useMemo(() => {
-    const list = locations.map((location) => ({
-      value: location._id,
-      label: location.name,
-      description: [location.building, location.category].filter(Boolean).join(" • "),
-      searchText: `${location.name} ${location.building || ""} ${location.category || ""}`,
-    }));
+    const list = locations.map(
+      (location) => ({
+        value: location._id,
+        label: location.name,
+        description: [
+          location.building,
+          location.category,
+        ]
+          .filter(Boolean)
+          .join(" • "),
+        searchText: `${location.name} ${
+          location.building || ""
+        } ${location.category || ""}`,
+      })
+    );
 
     if (customSource) {
       return [
@@ -572,7 +894,8 @@ const Directions = () => {
           value: customSource._id,
           label: `📍 ${customSource.name}`,
           description: "Live Coordinate",
-          searchText: "current location my live gps gate",
+          searchText:
+            "current location my live gps gate",
         },
         ...list,
       ];
@@ -581,65 +904,141 @@ const Directions = () => {
     return list;
   }, [locations, customSource]);
 
+  /* =========================================================
+     FETCH DATA
+  ========================================================= */
+
   useEffect(() => {
-    if (!buildings.length) dispatch(fetchBuildings());
-    if (!roads.length) dispatch(fetchRoads());
-    if (!campusElements.length) dispatch(fetchCampusElements());
-    if (!locations.length) dispatch(fetchLocations());
-  }, [dispatch, locations.length, buildings.length, roads.length, campusElements.length]);
+    if (!buildings.length)
+      dispatch(fetchBuildings());
 
-  const handleUseCurrentLocation = async () => {
-    setLocating(true);
-    setLocationNotice("");
+    if (!roads.length)
+      dispatch(fetchRoads());
 
-    try {
-      const coords = await getDeviceCoordinates();
-      const inside = isInsideCampus(coords.lat, coords.lng);
+    if (!campusElements.length)
+      dispatch(fetchCampusElements());
 
-      if (inside) {
-        const campusPos = convertGpsToCampus(coords.lat, coords.lng);
-        const liveSource = {
-          _id: "my-live-gps",
-          name: "My Live Location (GPS)",
-          x: campusPos.x,
-          y: campusPos.y,
-          isCurrentLocation: true,
-        };
+    if (!locations.length)
+      dispatch(fetchLocations());
+  }, [
+    dispatch,
+    locations.length,
+    buildings.length,
+    roads.length,
+    campusElements.length,
+  ]);
 
-        setCustomSource(liveSource);
-        setFrom(liveSource._id);
-        setLocationNotice("Live GPS location found successfully!");
-      } else {
-        const dynamicMainGate = getDynamicMainGate();
-        setCustomSource(dynamicMainGate);
-        setFrom(dynamicMainGate._id);
-        setLocationNotice(
-          `You are outside the campus. Starting point set to '${dynamicMainGate.name}'.`
+  /* =========================================================
+     USE CURRENT LOCATION
+  ========================================================= */
+
+  const handleUseCurrentLocation =
+    async () => {
+      setLocating(true);
+      setLocationNotice("");
+
+      try {
+        const coords =
+          await getDeviceCoordinates();
+
+        const inside = isInsideCampus(
+          coords.lat,
+          coords.lng
         );
+
+        if (inside) {
+          const campusPos =
+            convertGpsToCampus(
+              coords.lat,
+              coords.lng
+            );
+
+          const liveSource = {
+            _id: "my-live-gps",
+            name: "My Live Location (GPS)",
+            x: campusPos.x,
+            y: campusPos.y,
+            isCurrentLocation: true,
+          };
+
+          setCustomSource(liveSource);
+          setFrom(liveSource._id);
+
+          setLocationNotice(
+            "Live GPS location found successfully!"
+          );
+        } else {
+          const dynamicMainGate =
+            getDynamicMainGate();
+
+          setCustomSource(
+            dynamicMainGate
+          );
+
+          setFrom(
+            dynamicMainGate._id
+          );
+
+          setLocationNotice(
+            `You are outside the campus. Starting point set to '${dynamicMainGate.name}'.`
+          );
+        }
+      } catch (err) {
+        console.warn(
+          "GPS error, applying Main Gate fallback:",
+          err.message
+        );
+
+        const dynamicMainGate =
+          getDynamicMainGate();
+
+        setCustomSource(
+          dynamicMainGate
+        );
+
+        setFrom(
+          dynamicMainGate._id
+        );
+
+        setLocationNotice(
+          `Unable to retrieve GPS, starting point set to '${dynamicMainGate.name}'.`
+        );
+      } finally {
+        setLocating(false);
       }
-    } catch (err) {
-      console.warn("GPS error, applying Main Gate fallback:", err.message);
-      const dynamicMainGate = getDynamicMainGate();
-      setCustomSource(dynamicMainGate);
-      setFrom(dynamicMainGate._id);
-      setLocationNotice(
-        `Unable to retrieve GPS, starting point set to '${dynamicMainGate.name}'.`
-      );
-    } finally {
-      setLocating(false);
-    }
-  };
+    };
+
+  /* =========================================================
+     FIND ROUTE
+  ========================================================= */
 
   const handleFindRoute = () => {
-    if (!from || !to || from === to) return;
+    if (
+      !from ||
+      !to ||
+      from === to
+    ) {
+      return;
+    }
 
     let actualFromId = from;
-    if (customSource && from === customSource._id) {
-      let closestLoc = locations[0];
-      let minDistance = Infinity;
+
+    if (
+      customSource &&
+      from === customSource._id
+    ) {
+      let closestLoc =
+        locations[0];
+
+      let minDistance =
+        Infinity;
 
       locations.forEach((loc) => {
-        const dist = Math.hypot(loc.x - customSource.x, loc.y - customSource.y);
+        const dist = Math.hypot(
+          loc.x - customSource.x,
+          loc.y - customSource.y
+        );
+
         if (dist < minDistance) {
           minDistance = dist;
           closestLoc = loc;
@@ -647,7 +1046,8 @@ const Directions = () => {
       });
 
       if (closestLoc) {
-        actualFromId = closestLoc._id;
+        actualFromId =
+          closestLoc._id;
       }
     }
 
@@ -659,6 +1059,10 @@ const Directions = () => {
     );
   };
 
+  /* =========================================================
+     SWAP
+  ========================================================= */
+
   const handleSwap = () => {
     setFrom(to);
     setTo(from);
@@ -666,11 +1070,17 @@ const Directions = () => {
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => window.history.back()}
+              onClick={() =>
+                window.history.back()
+              }
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50"
             >
               <ArrowLeft size={19} />
@@ -680,6 +1090,7 @@ const Directions = () => {
               <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
                 Navigation
               </p>
+
               <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
                 Directions
               </h1>
@@ -688,8 +1099,15 @@ const Directions = () => {
         </div>
       </div>
 
+      {/* =====================================================
+          MAIN CONTENT
+      ===================================================== */}
+
       <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto] lg:items-end">
+
+          {/* START POINT */}
+
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
@@ -698,16 +1116,26 @@ const Directions = () => {
 
               <button
                 type="button"
-                onClick={handleUseCurrentLocation}
+                onClick={
+                  handleUseCurrentLocation
+                }
                 disabled={locating}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600 hover:bg-blue-100 active:scale-95 transition disabled:opacity-50"
               >
                 {locating ? (
-                  <Loader2 size={13} className="animate-spin" />
+                  <Loader2
+                    size={13}
+                    className="animate-spin"
+                  />
                 ) : (
                   <LocateFixed size={13} />
                 )}
-                <span>{locating ? "Locating..." : "Use My Location"}</span>
+
+                <span>
+                  {locating
+                    ? "Locating..."
+                    : "Use My Location"}
+                </span>
               </button>
             </div>
 
@@ -719,12 +1147,18 @@ const Directions = () => {
               placeholder="Type a campus location..."
               onChange={(val) => {
                 setFrom(val);
-                if (val !== customSource?._id) {
+
+                if (
+                  val !==
+                  customSource?._id
+                ) {
                   setLocationNotice("");
                 }
               }}
             />
           </div>
+
+          {/* SWAP */}
 
           <button
             onClick={handleSwap}
@@ -734,12 +1168,15 @@ const Directions = () => {
             <ArrowLeftRight size={18} />
           </button>
 
+          {/* DESTINATION */}
+
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-2">
               <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
                 Destination
               </span>
             </div>
+
             <SearchableSelect
               label=""
               icon={Navigation}
@@ -751,22 +1188,44 @@ const Directions = () => {
             />
           </div>
 
+          {/* GET DIRECTIONS */}
+
           <button
-            onClick={handleFindRoute}
-            disabled={!from || !to || from === to || routeLoading}
+            onClick={
+              handleFindRoute
+            }
+            disabled={
+              !from ||
+              !to ||
+              from === to ||
+              routeLoading
+            }
             className="flex h-[52px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Navigation size={18} />
-            {routeLoading ? "Finding Route..." : "Get Directions"}
+
+            {routeLoading
+              ? "Finding Route..."
+              : "Get Directions"}
           </button>
         </div>
 
+        {/* LOCATION NOTICE */}
+
         {locationNotice && (
           <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50/80 p-3 text-xs font-medium text-blue-800 border border-blue-200">
-            <Info size={15} className="shrink-0 text-blue-600" />
-            <span>{locationNotice}</span>
+            <Info
+              size={15}
+              className="shrink-0 text-blue-600"
+            />
+
+            <span>
+              {locationNotice}
+            </span>
           </div>
         )}
+
+        {/* ROUTE ERROR */}
 
         {routeError && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600">
@@ -774,33 +1233,65 @@ const Directions = () => {
           </div>
         )}
 
+        {/* ===================================================
+            ROUTE RESULT
+        =================================================== */}
+
         {selectedRoute && (
           <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.8fr)]">
-            <div className="min-h-[520px]">
+
+            {/* =================================================
+                MAP
+            ================================================= */}
+
+            <div className="min-h-[520px] min-w-0">
               <DirectionsMap
                 locations={locations}
-                selectedRoute={selectedRoute}
+                selectedRoute={
+                  selectedRoute
+                }
                 buildings={buildings}
                 roads={roads}
-                campusElements={campusElements}
+                campusElements={
+                  campusElements
+                }
                 viewMode={viewMode}
-                setViewMode={setViewMode}
+                setViewMode={
+                  setViewMode
+                }
                 customSourceLocation={
-                  customSource && from === customSource._id ? customSource : null
+                  customSource &&
+                  from ===
+                    customSource._id
+                    ? customSource
+                    : null
                 }
               />
             </div>
 
+            {/* =================================================
+                RIGHT SIDEBAR
+            ================================================= */}
+
             <div className="space-y-5">
+
+              {/* DISTANCE / TIME */}
+
               <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                     <RouteIcon size={21} />
                   </div>
+
                   <div>
-                    <p className="text-xs text-slate-400">Total Distance</p>
+                    <p className="text-xs text-slate-400">
+                      Total Distance
+                    </p>
+
                     <p className="text-lg font-bold text-slate-900">
-                      {selectedRoute.distance} m
+                      {selectedRoute.distance}{" "}
+                      m
                     </p>
                   </div>
                 </div>
@@ -809,32 +1300,50 @@ const Directions = () => {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50 text-green-600">
                     <Footprints size={21} />
                   </div>
+
                   <div>
-                    <p className="text-xs text-slate-400">Estimated Time</p>
+                    <p className="text-xs text-slate-400">
+                      Estimated Time
+                    </p>
+
                     <p className="text-lg font-bold text-slate-900">
-                      {selectedRoute.walkingTime} min
+                      {
+                        selectedRoute.walkingTime
+                      }{" "}
+                      min
                     </p>
                   </div>
                 </div>
               </div>
 
-              {selectedRoute.viaLocations?.length > 0 && (
+              {/* LOCATIONS ALONG ROUTE */}
+
+              {selectedRoute
+                .viaLocations
+                ?.length > 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <h2 className="font-bold text-slate-900">
                     Locations along this route
                   </h2>
+
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedRoute.viaLocations.map((location) => (
-                      <span
-                        key={location._id}
-                        className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
-                      >
-                        {location.name}
-                      </span>
-                    ))}
+                    {selectedRoute.viaLocations.map(
+                      (location) => (
+                        <span
+                          key={
+                            location._id
+                          }
+                          className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
+                        >
+                          {location.name}
+                        </span>
+                      )
+                    )}
                   </div>
                 </div>
               )}
+
+              {/* ROUTE DIRECTIONS */}
 
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b border-slate-200 px-5 py-4">
@@ -842,10 +1351,12 @@ const Directions = () => {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                       <Navigation size={19} />
                     </div>
+
                     <div>
                       <h2 className="font-bold text-slate-900">
                         Route Directions
                       </h2>
+
                       <p className="text-xs text-slate-500">
                         Follow the shortest walking route
                       </p>
@@ -854,57 +1365,97 @@ const Directions = () => {
                 </div>
 
                 <div className="max-h-[530px] overflow-y-auto">
+
+                  {/* START */}
+
                   <div className="flex gap-3 border-b border-slate-100 px-5 py-4">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                       1
                     </div>
+
                     <div className="min-w-0 flex-1">
                       <div className="flex justify-between gap-3">
                         <p className="font-semibold text-slate-800">
                           Start from{" "}
-                          {customSource && from === customSource._id
+                          {customSource &&
+                          from ===
+                            customSource._id
                             ? customSource.name
-                            : selectedRoute.from?.name}
+                            : selectedRoute
+                                .from
+                                ?.name}
                         </p>
-                        <span className="text-xs text-slate-400">0 m</span>
+
+                        <span className="text-xs text-slate-400">
+                          0 m
+                        </span>
                       </div>
+
                       <p className="mt-1 text-sm text-slate-500">
                         Start walking towards the route
                       </p>
                     </div>
                   </div>
 
-                  {selectedRoute.directions?.map((direction, index) => (
-                    <div
-                      key={`${direction.step}-${index}`}
-                      className="flex gap-3 border-b border-slate-100 px-5 py-4"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                        {index + 2}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex justify-between gap-3">
-                          <p className="font-semibold text-slate-800">
-                            {index === selectedRoute.directions.length - 1
-                              ? `Arrive at ${direction.to}`
-                              : `Go towards ${direction.to}`}
+                  {/* DIRECTIONS */}
+
+                  {selectedRoute.directions?.map(
+                    (
+                      direction,
+                      index
+                    ) => (
+                      <div
+                        key={`${direction.step}-${index}`}
+                        className="flex gap-3 border-b border-slate-100 px-5 py-4"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                          {index + 2}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between gap-3">
+                            <p className="font-semibold text-slate-800">
+                              {index ===
+                              selectedRoute
+                                .directions
+                                .length -
+                                1
+                                ? `Arrive at ${direction.to}`
+                                : `Go towards ${direction.to}`}
+                            </p>
+
+                            <span className="shrink-0 text-xs font-medium text-slate-500">
+                              {
+                                direction.distance
+                              }{" "}
+                              m
+                            </span>
+                          </div>
+
+                          <p className="mt-1 text-sm text-slate-500">
+                            {index ===
+                            selectedRoute
+                              .directions
+                              .length -
+                              1
+                              ? "Your destination"
+                              : `Walk from ${direction.from}`}
                           </p>
-                          <span className="shrink-0 text-xs font-medium text-slate-500">
-                            {direction.distance} m
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {index === selectedRoute.directions.length - 1
-                            ? "Your destination"
-                            : `Walk from ${direction.from}`}
-                        </p>
-                        <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
-                          <Footprints size={13} />
-                          {direction.walkingTime} min
+
+                          <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
+                            <Footprints
+                              size={13}
+                            />
+
+                            {
+                              direction.walkingTime
+                            }{" "}
+                            min
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             </div>

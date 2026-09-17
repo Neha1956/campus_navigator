@@ -34,7 +34,7 @@ const ELEMENT_COLORS = {
 const MAP_EXTRA_PADDING = 400;
 const MAP_GROWTH_STEP = 400;
 const MAP_VIEW_PADDING = 200;
-const MIN_ZOOM = 0.5;
+const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
 
@@ -814,7 +814,7 @@ const CampusMap = ({
 
   const handleMapWheel = (event) => {
     if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
+     // event.preventDefault();
       if (event.deltaY < 0) {
         changeZoom(zoom + ZOOM_STEP);
       } else {

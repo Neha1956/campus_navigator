@@ -48,26 +48,26 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   return (
     <>
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[2px] lg:hidden"
-        />
-      )}
+    {sidebarOpen && ( 
+  <div 
+    onClick={() => setSidebarOpen(false)} 
+    className="fixed inset-0 z-[9998] bg-slate-900/40 backdrop-blur-[2px] lg:hidden" 
+  /> 
+)} 
 
-      <aside
-        className={`
-          fixed left-0 top-16 z-50
-          h-[calc(100vh-64px)]
-          w-72
-          border-r border-slate-200
-          bg-white
-          shadow-xl
-          transition-transform duration-300
-          lg:hidden
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
-      >
+<aside 
+  className={` 
+    fixed left-0 top-16 z-[9999]
+    h-[calc(100vh-64px)] 
+    w-72 
+    border-r border-slate-200 
+    bg-white 
+    shadow-xl 
+    transition-transform duration-300 
+    lg:hidden 
+    ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
+  `} 
+>
         <div className="flex h-full flex-col overflow-y-auto p-4">
           <div className="mb-4 flex items-center justify-between">
             <div>
