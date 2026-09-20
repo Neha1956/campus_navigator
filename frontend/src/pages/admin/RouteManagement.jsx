@@ -11,6 +11,8 @@ import {
   MapPin,
   CheckCircle2,
   XCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { fetchLocations } from "../../redux/slices/locationSlice";
@@ -60,6 +62,12 @@ const RouteManagement = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   // =========================
+  // PAGINATION STATE
+  // =========================
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8; // एक पेज पर दिखने वाले रूट्स की संख्या
+
+  // =========================
   // FETCH DATA
   // =========================
 
@@ -77,15 +85,13 @@ const RouteManagement = () => {
 
   const filteredRoutes = useMemo(() => {
     return routes.filter((route) => {
-      const fromName =
-        route.from?.name ||
-        route.fromLocation?.name ||
-        "";
+      const fromName = getLocationName(
+        route.from || route.fromLocation
+      );
 
-      const toName =
-        route.to?.name ||
-        route.toLocation?.name ||
-        "";
+      const toName = getLocationName(
+        route.to || route.toLocation
+      );
 
       const searchText =
         `${fromName} ${toName}`.toLowerCase();
@@ -107,7 +113,22 @@ const RouteManagement = () => {
 
       return matchesSearch && matchesStatus;
     });
-  }, [routes, search, statusFilter]);
+  }, [routes, search, statusFilter, locations]);
+
+  // जब भी सर्च या फिल्टर बदले, पेज को 1 पर रीसेट करें
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  // =========================
+  // PAGINATED DATA
+  // =========================
+  const totalPages = Math.ceil(filteredRoutes.length / itemsPerPage) || 1;
+  
+  const paginatedRoutes = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRoutes.slice(start, start + itemsPerPage);
+  }, [filteredRoutes, currentPage]);
 
   // =========================
   // OPEN ADD MODAL
@@ -314,14 +335,14 @@ const RouteManagement = () => {
   // LOCATION NAME
   // =========================
 
-  const getLocationName = (location) => {
+  function getLocationName(location) {
     if (!location) {
       return "Unknown";
     }
 
     // Populated object
     if (typeof location === "object") {
-      return location.name || "Unknown";
+      return location.name || getLocationName(location._id);
     }
 
     // ObjectId string
@@ -330,7 +351,7 @@ const RouteManagement = () => {
     );
 
     return found?.name || "Unknown";
-  };
+  }
 
   // =========================
   // STATS
@@ -633,7 +654,7 @@ const RouteManagement = () => {
 
                 <tbody className="divide-y divide-slate-100">
 
-                  {filteredRoutes.map((route) => {
+                  {paginatedRoutes.map((route) => {
 
                     // IMPORTANT:
                     // Backend field = isActive
@@ -789,6 +810,59 @@ const RouteManagement = () => {
 
             </div>
 
+          )}
+
+          {/* ================= PAGINATION FOOTER ================= */}
+          {!loading && filteredRoutes.length > 0 && (
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row">
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-semibold text-slate-700">{Math.min((currentPage - 1) * itemsPerPage + 1, filteredRoutes.length)}</span> to{" "}
+                <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filteredRoutes.length)}</span> of{" "}
+                <span className="font-semibold text-slate-700">{filteredRoutes.length}</span> entries
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={15} />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, index) => {
+                    const pageNumber = index + 1;
+                    return (
+                      <button
+                        key={pageNumber}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition ${
+                          currentPage === pageNumber
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
           )}
 
         </div>

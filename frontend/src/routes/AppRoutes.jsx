@@ -16,8 +16,10 @@ import AdminLogin from "../pages/admin/AdminLogin";
 import ProtectedRoute from "../utils/ProtectedRoute";
 import UserFeedback from "../pages/UserFeedback";
 import AdminFeedbackPage from "../pages/admin/AdminFeedbackPage";
+import Footer from "../components/Footer";
 const AppRoutes = () => {
   return (
+    <>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/map" element={<MapPage />} />
@@ -96,6 +98,8 @@ const AppRoutes = () => {
     
 
     </Routes>
+    <Footer />
+    </>
   );
 };
 
