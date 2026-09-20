@@ -703,11 +703,11 @@ const DirectionsMap = ({
       {/* =====================================================
           VIEW MODE BUTTONS
       ===================================================== */}
-      <div className="absolute top-0 left-4 z-[300] flex rounded-xl bg-white/95 p-1 border border-slate-200 shadow-md backdrop-blur">
+      <div className="absolute top-2 left-2 z-[300] flex rounded-xl bg-white/95 p-1 border border-slate-200 shadow-md backdrop-blur">
         <button
           type="button"
           onClick={() => setViewMode("2d")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition ${
             viewMode === "2d"
               ? "bg-blue-600 text-white shadow-sm"
               : "text-slate-600 hover:text-slate-900"
@@ -720,7 +720,7 @@ const DirectionsMap = ({
         <button
           type="button"
           onClick={() => setViewMode("3d")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition ${
             viewMode === "3d"
               ? "bg-blue-600 text-white shadow-sm"
               : "text-slate-600 hover:text-slate-900"
@@ -747,14 +747,14 @@ const DirectionsMap = ({
         /* ===================================================
            FIXED 2D MAP SCROLL CONTAINER
         =================================================== */
-        <div className="w-full h-full min-h-[520px] overflow-auto rounded-2xl">
-          <div
+        <div className="w-full h-full min-h-[520px]  rounded-2xl">
+        {/*  <div
             className="relative min-w-[1400px] min-h-[900px]"
             style={{
               width: "1400px",
               height: "900px",
             }}
-          >
+          >*/}
             <CampusMap
               campusWidth={1400}
               campusHeight={900}
@@ -782,7 +782,7 @@ const DirectionsMap = ({
                     )
               }
             />
-          </div>
+        {/*  </div>*/}
         </div>
       )}
     </div>

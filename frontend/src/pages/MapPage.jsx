@@ -1064,7 +1064,19 @@ const MapPage = () => {
               routeSource={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.source : null}
               routeDestination={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.destination : null}
               routeDirections={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.directions : []}
-              onBack={() => setSelectedFloorForView(null)}
+             // onBack={() => setSelectedFloorForView(null)}
+            onBack={() => {
+  setSelectedFloorForView(null);
+  setFloorElementSearch("");
+  setActiveBuildingForFloors(
+    activeBuildingForFloors ||
+      buildings.find(
+        (b) =>
+          String(b._id) === String(selectedFloorForView?.buildingId)
+      ) ||
+      null
+  );
+}}
             />
           ) : viewMode === "3d" ? (
             <CampusViewer3DInternal
@@ -1078,6 +1090,7 @@ const MapPage = () => {
               highlightedElementId={highlightedMapItem?.type === "element" ? highlightedMapItem.item._id : null}
             />
           ) : (
+             <div className="relative flex-1 min-h-0 w-full overflow-hidden">
             <CampusMap
               campusCanvasRef={mapCanvasRef}
               campusWidth={1400}
@@ -1098,6 +1111,19 @@ const MapPage = () => {
               fitToContainer={true}
               currentLocation={currentLocation}
             />
+              {/* 2D MAP INSTRUCTION */}
+    <div className="pointer-events-none absolute left-3 top-8 md:top-3 z-[100] -translate-x-1">
+      <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-white/95 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-lg backdrop-blur sm:px-4 sm:py-2.5 sm:text-xs">
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+          🖱️
+        </span>
+
+        <span>
+          Double-click on a building to see floors
+        </span>
+      </div>
+    </div>
+  </div>
           )}
 
           {/* LOCATION DETAILS PANEL */}
