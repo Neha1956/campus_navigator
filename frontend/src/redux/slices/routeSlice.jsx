@@ -17,7 +17,21 @@ export const fetchRoutes = createAsyncThunk(
     try {
       const response = await getRoutes();
 
-      return response?.data?.data ?? response?.data ?? [];
+      const routes = response?.data;
+
+      if (Array.isArray(routes)) {
+        return routes;
+      }
+
+      if (Array.isArray(routes?.data)) {
+        return routes.data;
+      }
+
+      if (Array.isArray(response?.routes)) {
+        return response.routes;
+      }
+
+      return [];
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -49,7 +63,7 @@ export const addRoute = createAsyncThunk(
     try {
       const response = await createRoute(data);
 
-      return response.data;
+      return response?.data?.data ?? response?.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -67,7 +81,7 @@ export const editRoute = createAsyncThunk(
     try {
       const response = await updateRoute(id, data);
 
-      return response.data;
+      return response?.data?.data ?? response?.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||

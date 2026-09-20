@@ -556,10 +556,25 @@ export const getRouteBetweenLocations = async (req, res) => {
       (road) => Array.isArray(road.points) && road.points.length >= 2
     );
 
-    // Dijkstra Pathfinding Execution
-    const result = usableRoads.length
+    const directRoute = routes.find(
+      (route) =>
+        (route.from?._id.toString() === from &&
+          route.to?._id.toString() === to) ||
+        (route.from?._id.toString() === to &&
+          route.to?._id.toString() === from)
+    );
+
+    // Use the road network for the map geometry, even when a direct
+    // admin-created route exists. Keep the saved route metrics below.
+    let result = usableRoads.length
       ? getRoadNetworkPath(usableRoads, fromLocation, toLocation)
-      : getShortestPath(routes, from, to);
+      : null;
+
+    if (!result) {
+      result = directRoute
+        ? getShortestPath([directRoute], from, to)
+        : getShortestPath(routes, from, to);
+    }
 
     if (!result) {
       return res.status(404).json({
@@ -570,20 +585,36 @@ export const getRouteBetweenLocations = async (req, res) => {
       });
     }
 
-    // Calculate walking time
-    const walkingTime = Math.ceil(result.distance / 80);
-
     const path = result.path.map((route, index) => {
       const segment = route.toObject ? route.toObject() : route;
+      const segmentDistance = Math.ceil(Number(segment.distance) || 0);
+      const segmentWalkingTime = segment.walkingTime != null
+        ? Math.max(1, Number(segment.walkingTime))
+        : Math.max(1, Math.ceil(segmentDistance / 80));
+
       return {
         _id: segment._id || `road-segment-${index}`,
-        distance: Math.ceil(Number(segment.distance) || 0),
-        walkingTime: Math.max(1, Math.ceil((Number(segment.distance) || 0) / 80)),
+        distance: segmentDistance,
+        walkingTime: segmentWalkingTime,
         from: segment.reverse ? segment.to : segment.from,
         to: segment.reverse ? segment.from : segment.to,
         reverse: Boolean(segment.reverse),
       };
     });
+
+    const walkingTime = directRoute
+      ? Math.max(1, Number(directRoute.walkingTime))
+      : path.reduce(
+          (total, segment) => total + segment.walkingTime,
+          0
+        );
+
+    const distance = directRoute
+      ? Math.ceil(Number(directRoute.distance))
+      : path.reduce(
+          (total, segment) => total + segment.distance,
+          0
+        );
 
     const allLocations = await Location.find({
       isActive: { $ne: false },
@@ -648,8 +679,8 @@ export const getRouteBetweenLocations = async (req, res) => {
           x: toLocation.x,
           y: toLocation.y,
         },
-        distance: Math.ceil(result.distance),
-        walkingTime: Math.max(1, Math.ceil(result.distance / 80)),
+        distance,
+        walkingTime,
         path,
         viaLocations,
         directions: path.map((segment, index) => ({
