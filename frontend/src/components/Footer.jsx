@@ -13,7 +13,10 @@ import {
   MessageSquare,
   Sparkles,
   ChevronUp,
-  Hospital
+  Hospital,
+  PhoneCall,
+  CalendarDays,
+  ExternalLink
 } from "lucide-react";
 
 const Footer = () => {
@@ -27,35 +30,41 @@ const Footer = () => {
 
   const quickLinks = [
     {
-      name: "Home",
+      name: "Home Page",
       href: "/",
       icon: Navigation,
+      desc: "Return to homepage"
     },
     {
-      name: "Campus Map",
+      name: "Interactive Campus Map",
       href: "/map",
       icon: Map,
+      desc: "Explore 2D & 3D buildings"
     },
     {
-      name: "Locations",
+      name: "Campus Locations",
       href: "/locations",
       icon: MapPin,
+      desc: "Find specific rooms & places"
     },
     {
-      name: "Directions",
+      name: "Route Directions",
       href: "/directions",
       icon: Compass,
+      desc: "Step-by-step navigation"
     },
     isAuthenticated
       ? {
-          name: "Feedback",
+          name: "Admin Feedback",
           href: "/adminfeedback",
           icon: MessageSquare,
+          desc: "View & manage feedback"
         }
       : {
-          name: "Feedback",
-          href: "/feedback",
+          name: "Send Feedback",
+          href: "/userfeedback",
           icon: MessageSquare,
+          desc: "Share your thoughts"
         },
   ];
 
@@ -64,35 +73,16 @@ const Footer = () => {
   // =========================================================
 
   const campusResources = [
-    {
-      name: "Academic Buildings",
-      icon: Building2,
-    },
-    {
-      name: "Library",
-      icon: Map,
-    },
-    {
-      name: "Hostels",
-      icon: Building2,
-    },
-    {
-      name: "Departments",
-      icon: Compass,
-    },
-    {
-      name: "Labs & Classrooms",
-      icon: Search,
-    },
-     {
-      name: "Hospital",
-      icon: Hospital,
-    },
+    { name: "Academic Buildings", icon: Building2, info: "Lecture halls & offices" },
+    { name: "Central Library", icon: Map, info: "Study & research hub" },
+    { name: "Student Hostels", icon: Building2, info: "Residential blocks" },
+    { name: "Departments", icon: Compass, info: "Engineering & Science" },
+    { name: "Labs & Classrooms", icon: Search, info: "Practical study zones" },
+    { name: "Campus Hospital", icon: Hospital, info: "24/7 Medical support" },
   ];
 
   // =========================================================
   // SOCIAL LINKS
-  // Replace these with your official campus social links
   // =========================================================
 
   const socialLinks = [
@@ -122,10 +112,6 @@ const Footer = () => {
     },
   ];
 
-  // =========================================================
-  // SCROLL TO TOP
-  // =========================================================
-
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -133,84 +119,43 @@ const Footer = () => {
     });
   };
 
-  // =========================================================
-  // SOCIAL ICON
-  // Inline SVG keeps this independent from lucide-react
-  // =========================================================
-
   const SocialIcon = ({ type }) => {
     if (type === "linkedin") {
       return (
-        <svg
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="currentColor"
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.13 1.44-2.13 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.28 2.38 4.28 5.48v6.26ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM3.56 20.45h3.57V9H3.56v11.45Z" />
         </svg>
       );
     }
-
     if (type === "youtube") {
       return (
-        <svg
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="currentColor"
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M23.5 6.2a3.01 3.01 0 0 0-2.12-2.13C19.51 3.55 12 3.55 12 3.55s-7.51 0-9.38.52A3.01 3.01 0 0 0 .5 6.2C0 8.07 0 12 0 12s0 3.93.5 5.8a3.01 3.01 0 0 0 2.12 2.13c1.87.52 9.38.52 9.38.52s7.51 0 9.38-.52a3.01 3.01 0 0 0 2.12-2.13C24 15.93 24 12 24 12s0-3.93-.5-5.8ZM9.55 15.58V8.42L15.82 12l-6.27 3.58Z" />
         </svg>
       );
     }
-
     if (type === "instagram") {
       return (
-        <svg
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <rect x="3" y="3" width="18" height="18" rx="5" />
           <circle cx="12" cy="12" r="4" />
           <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
         </svg>
       );
     }
-
     return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="currentColor"
-        aria-hidden="true"
-      >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
         <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.49 22H3.38l7.24-8.28L2.8 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.86h1.72L8.27 4h-1.85l11.38 15.86Z" />
       </svg>
     );
   };
 
   return (
-    <footer className="relative overflow-hidden bg-slate-950 text-white">
-      {/* =========================================================
-          BACKGROUND EFFECTS
-      ========================================================= */}
-
+    <footer className="relative overflow-hidden bg-slate-950 text-white border-t border-slate-800">
+      {/* Background Glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Blue glow */}
         <div className="absolute -right-40 -top-40 h-[420px] w-[420px] rounded-full bg-blue-600/10 blur-3xl" />
-
-        {/* Indigo glow */}
         <div className="absolute -bottom-48 -left-48 h-[450px] w-[450px] rounded-full bg-indigo-600/10 blur-3xl" />
-
-        {/* Center glow */}
-        <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/[0.025] blur-3xl" />
-
-        {/* Grid */}
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
@@ -219,108 +164,65 @@ const Footer = () => {
             backgroundSize: "45px 45px",
           }}
         />
-
-        {/* Decorative dots */}
-        <div className="absolute left-[12%] top-[20%] h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 shadow-[0_0_18px_4px_rgba(96,165,250,0.25)]" />
-
-        <div className="absolute right-[18%] top-[32%] h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400 shadow-[0_0_18px_4px_rgba(129,140,248,0.25)]" />
-
-        <div className="absolute bottom-[22%] left-[42%] h-1 w-1 animate-pulse rounded-full bg-blue-300 shadow-[0_0_15px_4px_rgba(96,165,250,0.2)]" />
-
-        <div className="absolute bottom-[15%] right-[35%] h-1 w-1 animate-pulse rounded-full bg-indigo-300" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* =========================================================
-            TOP BRAND SECTION
-        ========================================================= */}
-
-        <div className="border-b border-white/10 py-10 sm:py-12">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-            {/* Brand */}
+        
+        {/* TOP BRAND HEADER */}
+        <div className="border-b border-slate-800 py-8 sm:py-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
-              <div className="group relative">
-                {/* Glow */}
-                <div className="absolute inset-0 rounded-2xl bg-blue-500/30 blur-xl transition-all duration-500 group-hover:bg-blue-500/50" />
-
-                {/* Logo */}
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl shadow-blue-900/30 transition-transform duration-500 group-hover:scale-105">
-                  <Navigation
-                    size={27}
-                    strokeWidth={2}
-                    className="transition-transform duration-500 group-hover:rotate-12"
-                  />
-                </div>
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl shadow-blue-900/40">
+                <Navigation size={26} strokeWidth={2.2} className="text-white" />
               </div>
-
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+                  <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl text-white">
                     Campus Navigator
                   </h2>
-
-                  <Sparkles size={16} className="text-blue-400" />
+                  <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/30">
+                    Official Portal
+                  </span>
                 </div>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Smart Digital Campus Guide
+                <p className="mt-0.5 text-xs sm:text-sm text-slate-400 font-medium">
+                  Ramchandra Chandravanshi University (RCU)
                 </p>
               </div>
             </div>
 
-            {/* Description */}
-            <p className="max-w-xl text-sm leading-7 text-slate-400 lg:text-right">
-              Discover your campus with ease. Explore buildings, classrooms,
-              departments and facilities through an interactive digital
-              navigation experience.
-            </p>
+            {/* Status & Quick Tag */}
+         
+           <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400 shadow-sm">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                </span>
+                 Navigation System Online
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* =========================================================
-            MAIN FOOTER GRID
-        ========================================================= */}
-
-        <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
-          {/* =====================================================
-              ABOUT
-          ===================================================== */}
-
-          <div>
-            <div className="mb-5 flex items-center gap-2">
-              <span className="h-5 w-1 rounded-full bg-gradient-to-b from-blue-400 to-indigo-500" />
-
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                About Navigator
+        {/* MAIN 4-COLUMN GRID (Structured & Easy to Read) */}
+        <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          
+          {/* COLUMN 1: ABOUT & SOCIALS */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                About Platform
               </h3>
-            </div>
-
-            <p className="text-sm leading-7 text-slate-400">
-              A smart campus navigation platform designed to help students,
-              faculty, staff and visitors quickly discover places and navigate
-              around the university campus.
-            </p>
-
-            {/* System Status */}
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-400/10 bg-emerald-400/5 px-3 py-2 text-xs font-medium text-slate-300">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-              </span>
-
-              Navigation System Active
-            </div>
-
-            {/* =====================================================
-                SOCIAL MEDIA
-            ===================================================== */}
-
-            <div className="mt-7">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Connect with us
+              <p className="text-sm leading-relaxed text-slate-400">
+                An advanced smart campus guide built to help students, staff, and visitors seamlessly locate buildings, classrooms, and university facilities.
               </p>
+            </div>
 
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Official Social Channels
+              </p>
               <div className="flex flex-wrap gap-2.5">
                 {socialLinks.map((social) => (
                   <a
@@ -330,343 +232,190 @@ const Footer = () => {
                     rel="noopener noreferrer"
                     aria-label={social.label}
                     title={social.name}
-                    className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-white hover:shadow-lg hover:shadow-blue-950/30"
+                    className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-blue-500 hover:bg-blue-600 hover:text-white"
                   >
-                    {/* Shine animation */}
-                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-
-                    {/* Glow */}
-                    <span className="absolute inset-0 rounded-xl bg-blue-500/0 blur-md transition-all duration-300 group-hover:bg-blue-500/10" />
-
-                    <span className="relative transition-transform duration-300 group-hover:scale-110">
-                      <SocialIcon type={social.type} />
-                    </span>
+                    <SocialIcon type={social.type} />
                   </a>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* =====================================================
-              QUICK LINKS
-          ===================================================== */}
-
+          {/* COLUMN 2: QUICK NAVIGATION LINKS */}
           <div>
-            <div className="mb-5 flex items-center gap-2">
-              <span className="h-5 w-1 rounded-full bg-gradient-to-b from-blue-400 to-indigo-500" />
-
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                Explore
-              </h3>
-            </div>
-
-            <div className="space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+              Quick Navigation
+            </h3>
+            <ul className="space-y-2">
               {quickLinks.map((link) => {
                 const Icon = link.icon;
-
                 return (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 text-sm text-slate-400 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04] hover:text-white"
-                  >
-                    <span className="flex items-center gap-3">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.03] transition-all duration-300 group-hover:bg-blue-500/10">
-                        <Icon
-                          size={15}
-                          className="text-slate-500 transition-colors duration-300 group-hover:text-blue-400"
-                        />
-                      </span>
-
-                      {link.name}
-                    </span>
-
-                    <ArrowUpRight
-                      size={14}
-                      className="opacity-0 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100"
-                    />
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* =====================================================
-              CAMPUS RESOURCES
-          ===================================================== */}
-
-          <div>
-            <div className="mb-5 flex items-center gap-2">
-              <span className="h-5 w-1 rounded-full bg-gradient-to-b from-blue-400 to-indigo-500" />
-
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                Campus Resources
-              </h3>
-            </div>
-
-            <div className="space-y-3">
-              {campusResources.map((resource) => {
-                const Icon = resource.icon;
-
-                return (
-                  <div
-                    key={resource.name}
-                    className="group flex cursor-default items-center gap-3 text-sm text-slate-400 transition-colors duration-200 hover:text-slate-200"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-white/[0.03] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10"
+                  <li key={link.name}>
+                    <a
+                      href={link.href}
+                      className="group flex items-center justify-between rounded-xl border border-transparent bg-slate-900/60 px-3.5 py-2.5 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-blue-500/30 hover:bg-blue-600/10 hover:text-white"
                     >
-                      <Icon
-                        size={14}
-                        className="text-blue-400 transition-transform duration-300 group-hover:scale-110"
-                      />
-                    </div>
-
-                    <span>{resource.name}</span>
-                  </div>
+                      <span className="flex items-center gap-3">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                          <Icon size={15} />
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold leading-tight">{link.name}</p>
+                          <p className="text-[10px] text-slate-400">{link.desc}</p>
+                        </div>
+                      </span>
+                      <ArrowUpRight size={14} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </a>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
 
-         {/* =====================================================
-    CAMPUS INFORMATION
-===================================================== */}
-
-<div>
-  <div className="mb-5 flex items-center gap-2">
-    <span className="h-5 w-1 rounded-full bg-gradient-to-b from-blue-400 to-indigo-500" />
-
-    <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-      Campus Information
-      <p className="text-gray-500">Ramchandra Chandrawanshi University</p>
-    </h3>
-  </div>
-
-  <div className="space-y-4">
-    {/* Address */}
-    <a
-      href="https://www.google.com/maps/search/?api=1&query=Ramchandra+Chandravansi+University+Kosiar+Jharkhand+822132"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-start gap-3"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/[0.04] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10">
-        <MapPin size={17} className="text-blue-400" />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Address
-        </p>
-
-        <p className="mt-1 text-sm leading-5 text-slate-300 transition-colors group-hover:text-blue-400">
-          6WXV+6CR, Kosiar, Jharkhand 822132
-        </p>
-      </div>
-    </a>
-
-    {/* Founded */}
-    <div className="group flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/[0.04] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10">
-        <Building2 size={17} className="text-blue-400" />
-      </div>
-
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Founded
-        </p>
-
-        <p className="mt-1 text-sm text-slate-300">
-          2018
-        </p>
-      </div>
-    </div>
-
-    {/* Enrollment */}
-    <div className="group flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/[0.04] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10">
-        <Search size={17} className="text-blue-400" />
-      </div>
-
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Total Enrollment
-        </p>
-
-        <p className="mt-1 text-sm text-slate-300">
-          7,403 students
-          <span className="ml-1 text-xs text-slate-500">
-            (2024)
-          </span>
-        </p>
-      </div>
-    </div>
-
-    {/* Phone */}
-    <a
-      href="tel:09334406228"
-      className="group flex items-start gap-3"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/[0.04] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10">
-        <svg
-          viewBox="0 0 24 24"
-          className="h-[17px] w-[17px] text-blue-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z" />
-        </svg>
-      </div>
-
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Phone
-        </p>
-
-        <p className="mt-1 text-sm text-slate-300 transition-colors group-hover:text-blue-400">
-          093344 06228
-        </p>
-      </div>
-    </a>
-
-    {/* Email */}
-    <a
-      href="mailto:info.rcit@gmail.com"
-      className="group flex items-start gap-3"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/[0.04] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10">
-        <Mail size={17} className="text-blue-400" />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Email
-        </p>
-
-        <p className="mt-1 break-all text-sm text-slate-300 transition-colors group-hover:text-blue-400">
-          info.rcit@gmail.com
-        </p>
-      </div>
-    </a>
-
-    {/* Campus Hours */}
-    <div className="group flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/[0.04] transition-all duration-300 group-hover:border-blue-500/20 group-hover:bg-blue-500/10">
-        <Clock size={17} className="text-blue-400" />
-      </div>
-
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Campus Hours
-        </p>
-
-        <p className="mt-1 text-sm leading-5 text-slate-300">
-          Mon - Sat · 10:00 AM - 4:00 PM
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-        {/* =========================================================
-            MAP CTA
-        ========================================================= */}
-
-        <div className="relative mb-10 overflow-hidden rounded-3xl border border-blue-400/10 bg-gradient-to-br from-blue-600/15 via-indigo-600/10 to-slate-900/30 p-5 shadow-2xl shadow-blue-950/20 sm:p-8">
-          {/* CTA Background */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
-
-            <div className="absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-indigo-500/10 blur-3xl" />
-
-            {/* Route Line */}
-            <div className="absolute left-[8%] right-[8%] top-1/2 hidden h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent sm:block" />
-
-            {/* Small route dots */}
-            <div className="absolute left-[15%] top-1/2 hidden h-2 w-2 -translate-y-1/2 rounded-full bg-blue-400/40 sm:block" />
-
-            <div className="absolute right-[20%] top-1/2 hidden h-2 w-2 -translate-y-1/2 rounded-full bg-indigo-400/40 sm:block" />
+          {/* COLUMN 3: CAMPUS RESOURCES */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+              Campus Facilities
+            </h3>
+            <ul className="space-y-2.5">
+              {campusResources.map((res) => {
+                const Icon = res.icon;
+                return (
+                  <li
+                    key={res.name}
+                    className="flex items-center gap-3 rounded-xl border border-slate-900 bg-slate-900/40 px-3.5 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-900"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      <Icon size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-200 truncate">{res.name}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{res.info}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
-          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/15">
-                <span className="absolute inset-0 animate-ping rounded-2xl bg-blue-500/5" />
+          {/* COLUMN 4: CONTACT & LOCATION INFO */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+              University Contact
+            </h3>
+            <div className="space-y-3 text-xs">
+              
+              {/* Address */}
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Ramchandra+Chandravansi+University+Kosiar+Jharkhand+822132"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 rounded-xl bg-slate-900/60 p-3 border border-slate-800 transition hover:border-blue-500/40 group"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                  <MapPin size={15} />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-300 group-hover:text-blue-400 flex items-center gap-1">
+                    Campus Address <ExternalLink size={10} />
+                  </p>
+                  <p className="mt-0.5 text-slate-400 leading-snug">Kosiar, Jharkhand 822132</p>
+                </div>
+              </a>
 
-                <Navigation
-                  size={22}
-                  className="relative text-blue-400"
-                />
+              {/* Phone */}
+              <a
+                href="tel:09334406228"
+                className="flex items-center gap-3 rounded-xl bg-slate-900/60 p-3 border border-slate-800 transition hover:border-blue-500/40 group"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                  <PhoneCall size={14} />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-300 group-hover:text-emerald-400">Phone Support</p>
+                  <p className="mt-0.5 text-slate-400">093344 06228</p>
+                </div>
+              </a>
+
+              {/* Email */}
+              <a
+                href="mailto:info.rcit@gmail.com"
+                className="flex items-center gap-3 rounded-xl bg-slate-900/60 p-3 border border-slate-800 transition hover:border-blue-500/40 group"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
+                  <Mail size={14} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-300 group-hover:text-indigo-400">Official Email</p>
+                  <p className="mt-0.5 text-slate-400 truncate">info.rcit@gmail.com</p>
+                </div>
+              </a>
+
+              {/* Hours */}
+              <div className="flex items-center gap-3 rounded-xl bg-slate-900/40 p-3 border border-slate-800/80">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+                  <Clock size={14} />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-300">Office Hours</p>
+                  <p className="mt-0.5 text-slate-400">Mon - Sat · 10:00 AM - 4:00 PM</p>
+                </div>
               </div>
 
+            </div>
+          </div>
+
+        </div>
+
+        {/* MAP CTA BANNER */}
+        <div className="relative mb-10 overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 p-5 sm:p-6 shadow-xl">
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/30">
+                <Navigation size={22} />
+              </div>
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-bold text-white">
-                    Find your destination
-                  </h3>
-
-                  <Sparkles size={15} className="text-blue-400" />
-                </div>
-
-                <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400">
-                  Search for a building or location and get directions through
-                  the interactive campus map.
+                <h4 className="text-base font-bold text-white flex items-center gap-1.5">
+                  Looking for a specific room or lab? <Sparkles size={14} className="text-blue-400" />
+                </h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Use our interactive map to get optimized indoor and outdoor directions instantly.
                 </p>
               </div>
             </div>
 
             <a
               href="/map"
-              className="group inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-500 hover:shadow-blue-900/50 sm:w-fit"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500"
             >
-              <Map size={17} />
-
-              Explore Campus
-
-              <ArrowUpRight
-                size={16}
-                className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-              />
+              <Map size={15} />
+              Launch Campus Map
+              <ArrowUpRight size={14} />
             </a>
           </div>
         </div>
 
-        {/* =========================================================
-            BOTTOM BAR
-        ========================================================= */}
+        {/* BOTTOM COPYRIGHT & BACK TO TOP BAR */}
+        <div className="border-t border-slate-800 py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-400">
+            <p>
+              © {new Date().getFullYear()} Campus Navigator · Ramchandra Chandravanshi University. All rights reserved.
+            </p>
 
-        <div className="border-t border-white/10 py-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            {/* Copyright */}
-            <div className="text-center sm:text-left">
-              <p className="text-xs text-slate-500 sm:text-sm">
-                © {new Date().getFullYear()} Campus Navigator. All rights
-                reserved.
-              </p>
-
-              <p className="mt-1 text-xs text-slate-600">
-                Smart navigation for a smarter campus.
-              </p>
-            </div>
-
-            {/* Back To Top */}
             <button
               onClick={scrollToTop}
               aria-label="Back to top"
-              className="group mx-auto inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-slate-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-blue-400 sm:mx-0"
+              className="group inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 font-semibold text-slate-300 transition hover:border-blue-500 hover:bg-blue-600 hover:text-white self-center sm:self-auto"
             >
               Back to top
-
-              <ChevronUp
-                size={15}
-                className="transition-transform duration-300 group-hover:-translate-y-0.5"
-              />
+              <ChevronUp size={14} className="transition-transform group-hover:-translate-y-0.5" />
             </button>
           </div>
         </div>
+
       </div>
     </footer>
   );

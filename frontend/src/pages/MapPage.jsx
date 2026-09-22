@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
+import Floor2DViewer from "../components/map/Floor2DViewer";
 import * as THREE from "three";
 import {
   Search,
@@ -83,6 +84,13 @@ const Building3D = ({ building, onOpen, hideLabels, highlighted }) => {
   const rotation = (Number(building.rotation || 0) * Math.PI) / 180;
   const color = highlighted ? "#F59E0B" : building.color || "#93C5FD";
 
+  // FIXED: Sirf tabhi true hoga jab building ke paas actual floors created honge
+  const hasFloors = Boolean(
+    building.hasFloors || 
+    (Array.isArray(building.floors) && building.floors.length > 0) || 
+    building.floorCount > 0
+  );
+
   return (
     <group position={[x, y, z]} rotation={[0, -rotation, 0]}>
       <mesh castShadow receiveShadow>
@@ -110,17 +118,19 @@ const Building3D = ({ building, onOpen, hideLabels, highlighted }) => {
         >
           <div className="flex flex-col items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-lg border border-slate-200 bg-white/95 text-xs font-bold whitespace-nowrap pointer-events-auto select-none">
             <span className="text-slate-800">{building.name}</span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen(building);
-              }}
-              className="flex items-center gap-1 text-[10px] bg-blue-600 text-white px-2.5 py-1 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition"
-            >
-              <Layers size={12} />
-              Open Floors
-            </button>
+            {hasFloors && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpen(building);
+                }}
+                className="flex items-center gap-1 text-[10px] bg-blue-600 text-white px-2.5 py-1 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition"
+              >
+                <Layers size={12} />
+                Open Floors
+              </button>
+            )}
           </div>
         </Html>
       )}
@@ -251,32 +261,66 @@ const CampusViewer3DInternal = ({
   highlightedElementId = null,
 }) => {
   const bounds = useMemo(() => {
-    let w = 1400;
-    let h = 900;
+    let minX = 0;
+    let minY = 0;
+    let maxX = 1400;
+    let maxY = 900;
 
     buildings.forEach((b) => {
-      const bx = Number(b.position?.x || 0) + Number(b.dimensions?.width || 250);
-      const by = Number(b.position?.y || 0) + Number(b.dimensions?.height || 180);
-      w = Math.max(w, bx + 200);
-      h = Math.max(h, by + 200);
+      const x = Number(b.position?.x ?? b.x ?? 0);
+      const y = Number(b.position?.y ?? b.y ?? 0);
+      const width = Math.max(60, Number(b.dimensions?.width ?? b.width ?? 250));
+      const height = Math.max(40, Number(b.dimensions?.height ?? b.height ?? 180));
+      
+      minX = Math.min(minX, x - 400);
+      minY = Math.min(minY, y - 400);
+      maxX = Math.max(maxX, x + width + 400);
+      maxY = Math.max(maxY, y + height + 400);
     });
 
     campusElements.forEach((el) => {
-      const ex = Number(el.position?.x || 0) + Number(el.dimensions?.width || 180);
-      const ey = Number(el.position?.y || 0) + Number(el.dimensions?.height || 120);
-      w = Math.max(w, ex + 200);
-      h = Math.max(h, ey + 200);
+      const x = Number(el.position?.x ?? 0);
+      const y = Number(el.position?.y ?? 0);
+      const width = Math.max(40, Number(el.dimensions?.width ?? 180));
+      const height = Math.max(40, Number(el.dimensions?.height ?? 120));
+
+      minX = Math.min(minX, x - 400);
+      minY = Math.min(minY, y - 400);
+      maxX = Math.max(maxX, x + width + 400);
+      maxY = Math.max(maxY, y + height + 400);
     });
 
-    return { width: w, height: h };
-  }, [buildings, campusElements]);
+    campusRoads.forEach((road) => {
+      const points = road.points || [];
+      points.forEach((pt) => {
+        const px = Number(pt?.x ?? 0);
+        const py = Number(pt?.y ?? 0);
+        minX = Math.min(minX, px - 400);
+        minY = Math.min(minY, py - 400);
+        maxX = Math.max(maxX, px + 400);
+        maxY = Math.max(maxY, py + 400);
+      });
+    });
+
+    minX = Math.floor(minX / 400) * 400;
+    minY = Math.floor(minY / 400) * 400;
+    const finalWidth = Math.ceil((maxX - minX) / 400) * 400;
+    const finalHeight = Math.ceil((maxY - minY) / 400) * 400;
+
+    return {
+      minX,
+      minY,
+      width: Math.max(1400, finalWidth),
+      height: Math.max(900, finalHeight),
+    };
+  }, [buildings, campusElements, campusRoads]);
 
   return (
     <div className="w-full h-full min-h-[300px] sm:min-h-[500px] bg-slate-950 relative overflow-hidden rounded-2xl flex-1">
-      <Canvas
+     <Canvas
         shadows
         camera={{
-          position: [bounds.width * 0.8, 900, bounds.height * 1.1],
+          position: [bounds.minX + bounds.width * 0.75, 900, bounds.minY + bounds.height * 0.95],
           fov: 45,
           near: 1,
           far: 15000,
@@ -284,7 +328,7 @@ const CampusViewer3DInternal = ({
       >
         <ambientLight intensity={1.4} />
         <directionalLight
-          position={[bounds.width * 0.5, 1200, bounds.height * 0.5]}
+          position={[bounds.minX + bounds.width * 0.5, 1200, bounds.minY + bounds.height * 0.5]}
           intensity={2.2}
           castShadow
         />
@@ -292,7 +336,7 @@ const CampusViewer3DInternal = ({
 
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[bounds.width / 2, -1, bounds.height / 2]}
+          position={[bounds.minX + bounds.width / 2, -1, bounds.minY + bounds.height / 2]}
           receiveShadow
         >
           <planeGeometry args={[bounds.width, bounds.height]} />
@@ -307,9 +351,8 @@ const CampusViewer3DInternal = ({
           sectionThickness={1.2}
           fadeDistance={4000}
           fadeStrength={1}
-          position={[bounds.width / 2, 0.2, bounds.height / 2]}
+          position={[bounds.minX + bounds.width / 2, 0.2, bounds.minY + bounds.height / 2]}
         />
-
         {campusRoads.map((road) => (
           <Road3D key={road._id} road={road} />
         ))}
@@ -354,16 +397,16 @@ const CampusViewer3DInternal = ({
           </group>
         )}
 
-        <OrbitControls
+       <OrbitControls
           enableDamping
           dampingFactor={0.08}
           minDistance={100}
           maxDistance={5000}
           maxPolarAngle={Math.PI / 2.05}
           target={[
-            currentLocation ? Number(currentLocation.x) : bounds.width / 2,
+            currentLocation ? Number(currentLocation.x) : bounds.minX + bounds.width / 2,
             0,
-            currentLocation ? Number(currentLocation.y) : bounds.height / 2,
+            currentLocation ? Number(currentLocation.y) : bounds.minY + bounds.height / 2,
           ]}
         />
       </Canvas>
@@ -391,7 +434,7 @@ const CampusViewer3DInternal = ({
 const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
   const routeDots = useMemo(() => {
     const dots = [];
-    const spacing = 28;
+    const spacing = 16;
 
     routePoints.slice(0, -1).forEach((start, index) => {
       const end = routePoints[index + 1];
@@ -406,7 +449,7 @@ const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
         const progress = dotIndex / dotCount;
         dots.push([
           startX + (endX - startX) * progress,
-          28,
+          10,
           startZ + (endZ - startZ) * progress,
         ]);
       }
@@ -420,21 +463,21 @@ const IndoorRoute3D = ({ routePoints = [], source, destination }) => {
   return (
     <>
       {routeDots.map((position, index) => (
-        <mesh key={`indoor-route-dot-${index}`} position={position} renderOrder={1000}>
-          <sphereGeometry args={[6, 12, 12]} />
-          <meshBasicMaterial color="#2563EB" depthTest={false} />
+        <mesh key={`indoor-route-dot-${index}`} position={position} renderOrder={9999}>
+          <sphereGeometry args={[7, 16, 16]} />
+          <meshStandardMaterial color="#2563EB" emissive="#1D4ED8" emissiveIntensity={1.2} depthTest={false} />
         </mesh>
       ))}
       {source && (
-        <Html position={[getIndoorElementCenter(source).x, 65, getIndoorElementCenter(source).y]} center distanceFactor={800}>
-          <div className="rounded-full border-2 border-white bg-blue-600 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
+        <Html position={[getIndoorElementCenter(source).x, 30, getIndoorElementCenter(source).y]} center distanceFactor={800}>
+          <div className="rounded-full border-2 border-white bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-xl whitespace-nowrap">
             START: {source.name}
           </div>
         </Html>
       )}
       {destinationPoint && (
-        <Html position={[destinationPoint.x, 65, destinationPoint.y]} center distanceFactor={800}>
-          <div className="rounded-full border-2 border-white bg-red-600 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-extrabold text-white shadow-xl whitespace-nowrap">
+        <Html position={[destinationPoint.x, 30, destinationPoint.y]} center distanceFactor={800}>
+          <div className="rounded-full border-2 border-white bg-red-600 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-xl whitespace-nowrap">
             DESTINATION: {destination.name}
           </div>
         </Html>
@@ -453,6 +496,8 @@ const Floor3DViewer = ({
   routeDestination,
   routeDirections = [],
 }) => {
+  const [floorViewMode, setFloorViewMode] = useState("2d");
+
   const bounds = useMemo(() => {
     const baseW = Number(floor?.width || 1200);
     const baseH = Number(floor?.height || 800);
@@ -495,92 +540,8 @@ const Floor3DViewer = ({
   const cameraDist = Math.max(bounds.width, bounds.depth);
 
   return (
-    <div className="w-full h-full min-h-[300px] sm:min-h-[500px] bg-slate-950 relative overflow-hidden rounded-2xl flex-1">
-      <Canvas
-        shadows
-        camera={{
-          position: [bounds.centerX + cameraDist * 0.6, Math.max(cameraDist * 0.7, 700), bounds.centerZ + cameraDist * 0.7],
-          fov: 45,
-          near: 0.1,
-          far: 20000,
-        }}
-      >
-        <ambientLight intensity={1.5} />
-        <directionalLight
-          position={[bounds.centerX + 400, 1200, bounds.centerZ + 400]}
-          intensity={2}
-          castShadow
-        />
-        <Environment preset="city" />
-
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[bounds.centerX, -1, bounds.centerZ]}
-          receiveShadow
-        >
-          <planeGeometry args={[bounds.width, bounds.depth]} />
-          <meshStandardMaterial color={floor?.backgroundColor || "#F8FAFC"} />
-        </mesh>
-
-        <Grid
-          args={[bounds.width, bounds.depth]}
-          cellSize={20}
-          cellThickness={0.5}
-          sectionSize={100}
-          sectionThickness={1}
-          fadeDistance={Math.max(bounds.width, bounds.depth) * 1.5}
-          position={[bounds.centerX, 0, bounds.centerZ]}
-        />
-
-        {elements.map((el) => {
-          const pos = el.position || {};
-          const dim = el.dimensions || {};
-          const elW = Number(dim.width || 100);
-          const elH = el.type === "corridor" ? 12 : Number(dim.height || 25);
-          const elD = el.type === "corridor"
-            ? Number(dim.height || 80)
-            : Number(dim.depth || dim.height || 80);
-
-          const posX = Number(pos.x || 0) + elW / 2;
-          const posZ = Number(pos.y || 0) + elD / 2;
-          const posY = Number(pos.z || 0) + elH / 2;
-          const color = el.color || ELEMENT_COLORS[el.type] || "#94A3B8";
-
-          return (
-            <group key={el._id} position={[posX, posY, posZ]}>
-              <mesh castShadow receiveShadow>
-                <boxGeometry args={[elW, elH, elD]} />
-                <meshStandardMaterial color={color} transparent opacity={0.9} />
-              </mesh>
-              <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(elW, elH, elD)]} />
-                <lineBasicMaterial color="#334155" linewidth={1} />
-              </lineSegments>
-              <Html position={[0, elH / 2 + 10, 0]} center distanceFactor={800} occlude>
-                <div className="px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold whitespace-nowrap bg-white text-slate-800 shadow select-none">
-                  {el.name}
-                </div>
-              </Html>
-            </group>
-          );
-        })}
-
-        <IndoorRoute3D
-          routePoints={routePoints}
-          source={routeSource}
-          destination={routeDestination}
-        />
-
-        <OrbitControls
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={100}
-          maxDistance={10000}
-          maxPolarAngle={Math.PI / 2.05}
-          target={[bounds.centerX, 0, bounds.centerZ]}
-        />
-      </Canvas>
-
+    <div className="w-full h-full min-h-[300px] sm:min-h-[500px] bg-slate-950 relative overflow-hidden rounded-2xl flex-1 flex flex-col">
+      {/* TOP HEADER CONTROLS */}
       <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap items-center gap-2 sm:gap-3 max-w-[calc(100%-1.5rem)]">
         <button
           type="button"
@@ -596,7 +557,142 @@ const Floor3DViewer = ({
           <p className="font-bold text-[11px] sm:text-xs truncate max-w-[140px] sm:max-w-[200px]">{building?.name}</p>
           <p className="text-[10px] sm:text-[11px] text-blue-400 font-semibold">{floor?.name} (Floor {floor?.floorNumber})</p>
         </div>
+
+        {/* 2D / 3D Toggle Switch for Floor Map */}
+        <div className="flex rounded-xl bg-white/90 p-1 border border-slate-200 shadow-lg backdrop-blur shrink-0">
+          <button
+            type="button"
+            onClick={() => setFloorViewMode("2d")}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+              floorViewMode === "2d" ? "bg-blue-600 text-white shadow-sm" : "text-slate-700 hover:text-slate-900"
+            }`}
+          >
+            <MapIcon size={13} />
+            <span>2D</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFloorViewMode("3d")}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+              floorViewMode === "3d" ? "bg-blue-600 text-white shadow-sm" : "text-slate-700 hover:text-slate-900"
+            }`}
+          >
+            <Boxes size={13} />
+            <span>3D</span>
+          </button>
+        </div>
       </div>
+
+      {/* RENDER EITHER 2D OR 3D FLOOR MAP */}
+      {floorViewMode === "2d" ? (
+        <Floor2DViewer
+          floor={floor}
+          elements={elements}
+          routePoints={routePoints}
+          routeSource={routeSource}
+          routeDestination={routeDestination}
+          routeDirections={routeDirections}
+        />
+      ) : (
+        <Canvas
+          shadows
+          camera={{
+            position: [bounds.centerX + cameraDist * 0.6, Math.max(cameraDist * 0.7, 700), bounds.centerZ + cameraDist * 0.7],
+            fov: 45,
+            near: 0.1,
+            far: 20000,
+          }}
+        >
+          <ambientLight intensity={1.5} />
+          <directionalLight
+            position={[bounds.centerX + 400, 1200, bounds.centerZ + 400]}
+            intensity={2}
+            castShadow
+          />
+          <Environment preset="city" />
+
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[bounds.centerX, -1, bounds.centerZ]}
+            receiveShadow
+          >
+            <planeGeometry args={[bounds.width, bounds.depth]} />
+            <meshStandardMaterial color={floor?.backgroundColor || "#F8FAFC"} />
+          </mesh>
+
+          <Grid
+            args={[bounds.width, bounds.depth]}
+            cellSize={20}
+            cellThickness={0.5}
+            sectionSize={100}
+            sectionThickness={1}
+            fadeDistance={Math.max(bounds.width, bounds.depth) * 1.5}
+            position={[bounds.centerX, 0, bounds.centerZ]}
+          />
+
+          {elements.map((el) => {
+            const pos = el.position || {};
+            const dim = el.dimensions || {};
+            
+            const isDoor = el.type === "door";
+            const isCorridor = el.type === "corridor";
+            
+            const elW = isDoor 
+              ? Math.max(8, Number(dim.width || 30)) 
+              : Number(dim.width || 100);
+              
+            const elH = isDoor 
+              ? 22 
+              : (isCorridor ? 6 : 28);
+              
+            const elD = isDoor 
+              ? 6 
+              : (isCorridor ? Number(dim.height || 80) : Number(dim.depth || dim.height || 80));
+
+            // EXACT POSITION ALIGNMENT: Synchronized perfectly with 2D map layout
+            const posX = Number(pos.x || 0) + elW / 2;
+            const posZ = Number(pos.y || 0) + elD / 2;
+            const posY = elH / 2; 
+            
+            const color = isDoor 
+              ? (el.color || "#B45309") 
+              : (el.color || ELEMENT_COLORS[el.type] || "#94A3B8");
+
+            return (
+              <group key={el._id} position={[posX, posY, posZ]}>
+                <mesh castShadow receiveShadow>
+                  <boxGeometry args={[elW, elH, elD]} />
+                  <meshStandardMaterial color={color} roughness={0.4} metalness={isDoor ? 0.2 : 0.05} />
+                </mesh>
+                <lineSegments>
+                  <edgesGeometry args={[new THREE.BoxGeometry(elW, elH, elD)]} />
+                  <lineBasicMaterial color="#334155" linewidth={1} />
+                </lineSegments>
+                <Html position={[0, elH / 2 + 5, 0]} center distanceFactor={800} occlude>
+                  <div className="px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-bold whitespace-nowrap bg-white text-slate-800 shadow-sm select-none border border-slate-200">
+                    {el.name}
+                  </div>
+                </Html>
+              </group>
+            );
+          })}
+
+          <IndoorRoute3D
+            routePoints={routePoints}
+            source={routeSource}
+            destination={routeDestination}
+          />
+
+          <OrbitControls
+            enableDamping
+            dampingFactor={0.08}
+            minDistance={100}
+            maxDistance={10000}
+            maxPolarAngle={Math.PI / 2.05}
+            target={[bounds.centerX, 0, bounds.centerZ]}
+          />
+        </Canvas>
+      )}
 
       <div className="hidden sm:block absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-[11px] text-slate-600 shadow-xl pointer-events-none">
         🖱 Drag = Rotate Floor • 🔍 Scroll = Zoom • 🖱 Right Click = Pan
@@ -658,7 +754,6 @@ const MapPage = () => {
   const [indoorRoute, setIndoorRoute] = useState(null);
   const [floorElementSearch, setFloorElementSearch] = useState("");
 
-  // CURRENT LIVE LOCATION STATES
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locationNotice, setLocationNotice] = useState("");
@@ -735,9 +830,6 @@ const MapPage = () => {
     });
   }, [locations, search, category]);
 
-  // -------------------------------------------------------------
-  // DYNAMIC MAIN GATE FINDER (Searches DB locations for "main gate")
-  // -------------------------------------------------------------
   const getDynamicMainGate = () => {
     const gateLocation = (Array.isArray(locations) ? locations : []).find(
       (loc) => loc.name?.toLowerCase().includes("main gate") || loc.category === "gate"
@@ -761,7 +853,6 @@ const MapPage = () => {
     };
   };
 
-  // SMART GPS / LIVE CURRENT LOCATION HANDLER
   const handleLocateMe = async () => {
     setLocating(true);
     setLocationNotice("");
@@ -771,7 +862,6 @@ const MapPage = () => {
       const inside = isInsideCampus(coords.lat, coords.lng);
 
       if (inside) {
-        // User is inside College Campus -> Real GPS Position
         const campusPos = convertGpsToCampus(coords.lat, coords.lng);
         const livePos = {
           _id: "user-current-gps",
@@ -784,7 +874,6 @@ const MapPage = () => {
         setCurrentLocation(livePos);
         setLocationNotice("Live location pinpointed on campus!");
       } else {
-        // User is outside or GPS is off -> Fallback to Main Gate location
         const dynamicMainGate = getDynamicMainGate();
         setCurrentLocation(dynamicMainGate);
         setLocationNotice(
@@ -918,7 +1007,6 @@ const MapPage = () => {
       <div className="shrink-0 border-b border-slate-200 bg-white z-20">
         <div className="px-3 py-2.5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-            {/* Title & Mobile Button */}
             <div className="flex items-center justify-between lg:justify-start gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
@@ -934,7 +1022,6 @@ const MapPage = () => {
                 </div>
               </div>
 
-              {/* MOBILE LOCATE ME BUTTON */}
               <button
                 type="button"
                 onClick={handleLocateMe}
@@ -950,10 +1037,8 @@ const MapPage = () => {
               </button>
             </div>
 
-            {/* Filter, View Mode & Desktop Locate Me Controls */}
             {!selectedFloorForView && (
               <div className="flex flex-wrap items-center gap-2">
-                {/* 2D / 3D Toggle */}
                 <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
                   <button
                     type="button"
@@ -981,7 +1066,6 @@ const MapPage = () => {
                   </button>
                 </div>
 
-                {/* DESKTOP LOCATE ME BUTTON */}
                 <button
                   type="button"
                   onClick={handleLocateMe}
@@ -996,7 +1080,6 @@ const MapPage = () => {
                   <span>{locating ? "Locating..." : "My Location"}</span>
                 </button>
 
-                {/* Search Bar */}
                 <div className="relative flex-1 min-w-[130px] sm:w-48">
                   <Search
                     size={14}
@@ -1011,7 +1094,6 @@ const MapPage = () => {
                   />
                 </div>
 
-                {/* Category Dropdown */}
                 <div className="relative shrink-0 w-28 sm:w-32">
                   <SlidersHorizontal
                     size={13}
@@ -1035,7 +1117,6 @@ const MapPage = () => {
         </div>
       </div>
 
-      {/* LOCATION NOTIFICATION BANNER */}
       {locationNotice && (
         <div className="mx-3 sm:mx-6 mt-2 flex items-center justify-between rounded-xl bg-blue-50/90 border border-blue-200 px-3 py-2 text-xs font-medium text-blue-800 shadow-sm z-20 shrink-0">
           <div className="flex items-center gap-2">
@@ -1052,7 +1133,6 @@ const MapPage = () => {
         </div>
       )}
 
-      {/* MAP VIEWPORT WRAPPER - FLEX FILL TO PREVENT OVERFLOW ON MOBILE */}
       <div className="flex-1 min-h-0 w-full p-2 sm:p-4 overflow-hidden flex flex-col">
         <div className="relative flex-1 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col">
           {selectedFloorForView ? (
@@ -1064,19 +1144,18 @@ const MapPage = () => {
               routeSource={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.source : null}
               routeDestination={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.destination : null}
               routeDirections={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.directions : []}
-             // onBack={() => setSelectedFloorForView(null)}
-            onBack={() => {
-  setSelectedFloorForView(null);
-  setFloorElementSearch("");
-  setActiveBuildingForFloors(
-    activeBuildingForFloors ||
-      buildings.find(
-        (b) =>
-          String(b._id) === String(selectedFloorForView?.buildingId)
-      ) ||
-      null
-  );
-}}
+              onBack={() => {
+                setSelectedFloorForView(null);
+                setFloorElementSearch("");
+                setActiveBuildingForFloors(
+                  activeBuildingForFloors ||
+                    buildings.find(
+                      (b) =>
+                        String(b._id) === String(selectedFloorForView?.buildingId)
+                    ) ||
+                    null
+                );
+              }}
             />
           ) : viewMode === "3d" ? (
             <CampusViewer3DInternal
@@ -1111,22 +1190,26 @@ const MapPage = () => {
               fitToContainer={true}
               currentLocation={currentLocation}
             />
-              {/* 2D MAP INSTRUCTION */}
-    <div className="pointer-events-none absolute left-3 top-8 md:top-3 z-[100] -translate-x-1">
-      <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-white/95 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-lg backdrop-blur sm:px-4 sm:py-2.5 sm:text-xs">
-        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-          🖱️
-        </span>
-
-        <span>
-          Double-click on a building to see floors
-        </span>
-      </div>
-    </div>
-  </div>
+          <div className="pointer-events-none absolute left-3 top-8 md:top-3 z-[100] -translate-x-1">
+              <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-white/95 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-lg backdrop-blur sm:px-4 sm:py-2.5 sm:text-xs">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  🖱️
+                </span>
+                <span>
+                  {(() => {
+                    const sampleBuilding = buildings.find(
+                      (b) => b.hasFloors || b.floorCount > 0 || (Array.isArray(b.floors) && b.floors.length > 0)
+                    );
+                    return sampleBuilding
+                      ? `Double-click on ${sampleBuilding.name} to see floors`
+                      : "Double-click on a building to see floors";
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
           )}
 
-          {/* LOCATION DETAILS PANEL */}
           {selectedLocation && !selectedFloorForView && (
             <div className="absolute right-3 top-3 sm:right-4 sm:top-4 z-[3000] w-[280px] sm:w-[320px] max-w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[85%] overflow-y-auto">
               <div className="flex items-start justify-between border-b border-slate-100 p-3.5 sm:p-4">
@@ -1210,7 +1293,6 @@ const MapPage = () => {
         </div>
       </div>
 
-      {/* SPECIFIC BUILDING FLOORS MODAL */}
       {activeBuildingForFloors && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 p-4 select-none backdrop-blur-sm">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85dvh]">
@@ -1224,7 +1306,7 @@ const MapPage = () => {
                     {activeBuildingForFloors.name}
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Select floor to view 3D plan
+                    Select floor to view plan
                   </p>
                 </div>
               </div>
@@ -1312,7 +1394,7 @@ const MapPage = () => {
                         </div>
 
                         <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-blue-600 shrink-0">
-                          <span>View 3D</span>
+                          <span>View Plan</span>
                           <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </button>
