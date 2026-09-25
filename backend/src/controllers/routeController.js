@@ -3,6 +3,9 @@ import Location from "../models/Location.js";
 import Road from "../models/Road.js";
 import getShortestPath from "../utils/shortestPath.js";
 
+const MAP_UNITS_PER_METER = 4;
+const WALKING_SPEED_METERS_PER_MINUTE = 80;
+
 const getRoadNetworkPath = (roads, fromLocation, toLocation) => {
   const nodes = new Map();
   const graph = new Map();
@@ -566,9 +569,11 @@ export const getRouteBetweenLocations = async (req, res) => {
 
     // Use the road network for the map geometry, even when a direct
     // admin-created route exists. Keep the saved route metrics below.
-    let result = usableRoads.length
+    const roadNetworkResult = usableRoads.length
       ? getRoadNetworkPath(usableRoads, fromLocation, toLocation)
       : null;
+    const usesRoadNetwork = Boolean(roadNetworkResult);
+    let result = roadNetworkResult;
 
     if (!result) {
       result = directRoute
@@ -587,10 +592,15 @@ export const getRouteBetweenLocations = async (req, res) => {
 
     const path = result.path.map((route, index) => {
       const segment = route.toObject ? route.toObject() : route;
-      const segmentDistance = Math.ceil(Number(segment.distance) || 0);
-      const segmentWalkingTime = segment.walkingTime != null
-        ? Math.max(1, Number(segment.walkingTime))
-        : Math.max(1, Math.ceil(segmentDistance / 80));
+      const rawDistance = Number(segment.distance) || 0;
+      const segmentDistance = usesRoadNetwork
+        ? Math.ceil(rawDistance / MAP_UNITS_PER_METER)
+        : Math.ceil(rawDistance);
+      const segmentWalkingTime = usesRoadNetwork
+        ? Math.max(1, Math.ceil(segmentDistance / WALKING_SPEED_METERS_PER_MINUTE))
+        : segment.walkingTime != null
+          ? Math.max(1, Number(segment.walkingTime))
+          : Math.max(1, Math.ceil(segmentDistance / WALKING_SPEED_METERS_PER_MINUTE));
 
       return {
         _id: segment._id || `road-segment-${index}`,
@@ -602,19 +612,21 @@ export const getRouteBetweenLocations = async (req, res) => {
       };
     });
 
-    const walkingTime = directRoute
-      ? Math.max(1, Number(directRoute.walkingTime))
-      : path.reduce(
-          (total, segment) => total + segment.walkingTime,
-          0
-        );
-
     const distance = directRoute
       ? Math.ceil(Number(directRoute.distance))
       : path.reduce(
           (total, segment) => total + segment.distance,
           0
         );
+
+    const walkingTime = directRoute
+      ? Math.max(1, Number(directRoute.walkingTime))
+      : usesRoadNetwork
+        ? Math.max(1, Math.ceil(distance / WALKING_SPEED_METERS_PER_MINUTE))
+        : path.reduce(
+            (total, segment) => total + segment.walkingTime,
+            0
+          );
 
     const allLocations = await Location.find({
       isActive: { $ne: false },
