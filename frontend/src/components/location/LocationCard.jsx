@@ -115,13 +115,13 @@ console.log(location);
 
 
         {/* Coordinates */}
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+       {/* <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
           <MapPin size={14} />
 
           <span>
             Position: {location.x}, {location.y}
           </span>
-        </div>
+        </div>*/}
 
 
         {/* Button */}

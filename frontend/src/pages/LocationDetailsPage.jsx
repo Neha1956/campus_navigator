@@ -201,15 +201,15 @@ const currentImage =
             {/* Visual Footer with Coordinates and Gallery */}
             <div className="space-y-4 border-t border-slate-100 p-5 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                 {/*  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                   <MapPin size={21} />
                 </div>
-                <div>
+             <div>
                   <p className="text-xs text-slate-400">Campus Coordinates</p>
                   <p className="mt-0.5 font-semibold text-slate-800">
                     X: {selectedLocation.x} &nbsp;•&nbsp; Y: {selectedLocation.y}
                   </p>
-                </div>
+                </div>*/}
               </div>
 
               {/* Image Gallery Thumbnails */}
@@ -268,7 +268,7 @@ const currentImage =
                 <span className="text-sm font-semibold text-slate-900">Campus</span>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+            {/*  <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
                 <div className="flex items-center gap-3">
                   <Compass size={18} className="text-blue-600" />
                   <span className="text-sm font-medium text-slate-600">Position</span>
@@ -277,7 +277,7 @@ const currentImage =
                   {selectedLocation.x}, {selectedLocation.y}
                 </span>
               </div>
-
+*/}
               <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
                 <div className="flex items-center gap-3">
                   <Building2 size={18} className="text-blue-600" />

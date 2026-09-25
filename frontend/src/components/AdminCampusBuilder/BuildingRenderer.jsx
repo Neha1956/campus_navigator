@@ -192,6 +192,11 @@ const BuildingRenderer = ({
     building?.color ||
     "#BFDBFE";
 
+  const buildingImage =
+    typeof building?.image === "string"
+      ? building.image
+      : building?.image?.url || "";
+
   const is3D =
     mapView === "3d";
 
@@ -656,7 +661,7 @@ const BuildingRenderer = ({
           3D SHADOW
       ===================================================== */}
 
-      {is3D && (
+      {!buildingImage && is3D && (
         <rect
           x="10"
           y="14"
@@ -674,7 +679,7 @@ const BuildingRenderer = ({
           RIGHT SIDE
       ===================================================== */}
 
-      {is3D && (
+      {!buildingImage && is3D && (
         <polygon
           points={`
             ${width},0
@@ -694,7 +699,7 @@ const BuildingRenderer = ({
           BOTTOM SIDE
       ===================================================== */}
 
-      {is3D && (
+      {!buildingImage && is3D && (
         <polygon
           points={`
             0,${height}
@@ -714,7 +719,7 @@ const BuildingRenderer = ({
           3D ROOF
       ===================================================== */}
 
-      {is3D && (
+      {!buildingImage && is3D && (
         <polygon
           points={`
             0,0
@@ -764,11 +769,23 @@ const BuildingRenderer = ({
         }
       />
 
+      {buildingImage && (
+        <image
+          href={buildingImage}
+          x="0"
+          y="0"
+          width={width}
+          height={height}
+          preserveAspectRatio="xMidYMid slice"
+          pointerEvents="none"
+        />
+      )}
+
       {/* =====================================================
           HEADER
       ===================================================== */}
 
-      <rect
+      {!buildingImage && <rect
         x="12"
         y="12"
         width={Math.max(
@@ -780,13 +797,13 @@ const BuildingRenderer = ({
         fill="#FFFFFF"
         opacity="0.95"
         pointerEvents="none"
-      />
+      />}
 
       {/* =====================================================
           BUILDING ICON
       ===================================================== */}
 
-      <foreignObject
+      {!buildingImage && <foreignObject
         x="20"
         y="20"
         width="30"
@@ -799,13 +816,13 @@ const BuildingRenderer = ({
             className="text-slate-700"
           />
         </div>
-      </foreignObject>
+      </foreignObject>}
 
       {/* =====================================================
           BUILDING NAME
       ===================================================== */}
 
-      <text
+      {!buildingImage && <text
         x="55"
         y="38"
         fontSize="14"
@@ -815,13 +832,13 @@ const BuildingRenderer = ({
       >
         {building?.name ||
           "Building"}
-      </text>
+      </text>}
 
       {/* =====================================================
           BUILDING TYPE
       ===================================================== */}
 
-      <text
+      {!buildingImage && <text
         x="55"
         y="54"
         fontSize="9"
@@ -830,13 +847,13 @@ const BuildingRenderer = ({
       >
         {building?.type ||
           "Campus Building"}
-      </text>
+      </text>}
 
       {/* =====================================================
           WINDOWS
       ===================================================== */}
 
-      <g pointerEvents="none">
+      {!buildingImage && <g pointerEvents="none">
         {Array.from({
           length:
             windowCount,
@@ -870,13 +887,13 @@ const BuildingRenderer = ({
             );
           }
         )}
-      </g>
+      </g>}
 
       {/* =====================================================
           DOOR
       ===================================================== */}
 
-      <rect
+      {!buildingImage && <rect
         x={
           width / 2 -
           28
@@ -891,9 +908,9 @@ const BuildingRenderer = ({
         stroke="#1E293B"
         strokeWidth="3"
         pointerEvents="none"
-      />
+      />}
 
-      <foreignObject
+      {!buildingImage && <foreignObject
         x={
           width / 2 -
           12
@@ -911,13 +928,13 @@ const BuildingRenderer = ({
             className="text-white"
           />
         </div>
-      </foreignObject>
+      </foreignObject>}
 
       {/* =====================================================
           MAIN ENTRANCE
       ===================================================== */}
 
-      {showEntrance && (
+      {!buildingImage && showEntrance && (
         <g
           transform={`translate(
             ${entranceLocalX}

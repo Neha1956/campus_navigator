@@ -147,6 +147,7 @@ const PropertiesPanel = ({
   handleBuildingPropertyChange,
   handleBuildingPositionChange,
   handleBuildingDimensionChange,
+  handleBuildingRotation,
 
   handleCampusElementPropertyChange,
   handleCampusElementPositionChange,
@@ -379,6 +380,33 @@ const PropertiesPanel = ({
                 }
               />
             </div>
+          </Section>
+
+          <Section title="Rotation">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleBuildingRotation?.(-15)}
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Rotate left
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBuildingRotation?.(15)}
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Rotate right
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleBuildingRotation?.(15, true)}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50"
+            >
+              <RotateCw size={14} />
+              Reset rotation ({Number(selectedBuilding.rotation || 0)}°)
+            </button>
           </Section>
 
           <button

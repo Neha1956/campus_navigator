@@ -99,12 +99,13 @@ const getLocationForMapItem = (item, locations, referenceField) => {
   });
 };
 
-const LocationImageOverlay = ({ location, x, y, width, height, onOpen }) => {
+const LocationImageOverlay = ({ location, x, y, width, height, rotation = 0, onOpen }) => {
   const image = getLocationImage(location);
   if (!image) return null;
 
   return (
     <g
+      transform={`rotate(${Number(rotation) || 0} ${x + width / 2} ${y + height / 2})`}
       onDoubleClick={(event) => {
         event.stopPropagation();
         onOpen?.();
@@ -129,6 +130,43 @@ const LocationImageOverlay = ({ location, x, y, width, height, onOpen }) => {
           }}
         />
       </foreignObject>
+    </g>
+  );
+};
+
+const RouteEndpointsOverlay = ({ sourceLocation, destinationLocation, currentLocation }) => {
+  const renderPin = (location, color, label) => {
+    if (!location) return null;
+
+    return (
+      <g
+        transform={`translate(${Number(location.x) || 0}, ${Number(location.y) || 0})`}
+        style={{ pointerEvents: "none" }}
+      >
+        <circle r="52" fill={color} opacity="0.22" />
+        <path
+          d="M0,-46 C-18,-46 -32,-32 -32,-15 C-32,12 -5,38 0,46 C5,38 32,12 32,-15 C32,-32 18,-46 0,-46 Z"
+          fill={color}
+          stroke="#ffffff"
+          strokeWidth="5"
+          filter="drop-shadow(0px 4px 6px rgba(15,23,42,0.35))"
+        />
+        <circle r="12" fill="#ffffff" />
+        <rect x="-110" y="56" width="220" height="32" rx="10" fill="#ffffff" fillOpacity="0.98" stroke={color} strokeWidth="3" />
+        <text x="0" y="78" textAnchor="middle" fontSize="15" fontWeight="800" fill="#0f172a">
+          {label || location.name || "Location"}
+        </text>
+      </g>
+    );
+  };
+
+  return (
+    <g data-layer="route-endpoints">
+      {sourceLocation?.isCurrentLocation
+        ? renderPin(sourceLocation, "#2563EB", sourceLocation.name || "START")
+        : renderPin(sourceLocation, "#16A34A", sourceLocation?.name || "START")}
+      {destinationLocation && renderPin(destinationLocation, "#DC2626", destinationLocation.name || "DESTINATION")}
+      {!sourceLocation?.isCurrentLocation && currentLocation && renderPin(currentLocation, "#2563EB", currentLocation.name || "YOUR LOCATION")}
     </g>
   );
 };
@@ -1195,6 +1233,20 @@ const CampusMap = ({
                     floodOpacity="0.22"
                   />
                 </filter>
+                <filter id="campus-route-glow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#2563EB" floodOpacity="0.55" />
+                </filter>
+                <marker
+                  id="campus-route-arrow"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="auto"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <path d="M0,0 L12,6 L0,12 L3,6 Z" fill="#1D4ED8" />
+                </marker>
               </defs>
 
               <rect
@@ -1371,7 +1423,7 @@ const CampusMap = ({
                     points={routePolyline}
                     fill="none"
                     stroke="rgba(255,255,255,0.95)"
-                    strokeWidth="14"
+                    strokeWidth="20"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     pointerEvents="none"
@@ -1379,9 +1431,22 @@ const CampusMap = ({
                   <polyline
                     points={routePolyline}
                     fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="6"
-                    strokeDasharray="1 16"
+                    stroke="#1D4ED8"
+                    strokeWidth="14"
+                    strokeDasharray="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    markerMid="url(#campus-route-arrow)"
+                    markerEnd="url(#campus-route-arrow)"
+                    filter="url(#campus-route-glow)"
+                    pointerEvents="none"
+                  />
+                  <polyline
+                    points={routePolyline}
+                    fill="none"
+                    stroke="#93C5FD"
+                    strokeWidth="5"
+                    strokeDasharray="18 14"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     pointerEvents="none"
@@ -1462,13 +1527,27 @@ const CampusMap = ({
                     sourceLocation.x
                   )}, ${Number(sourceLocation.y)})`}
                 >
-                  <circle
-                    r="18"
-                    fill="#2563eb"
+                  <circle r="46" fill="#16A34A" opacity="0.2" />
+                  <path
+                    d="M0,-42 C-16,-42 -29,-29 -29,-13 C-29,10 -4,35 0,42 C4,35 29,10 29,-13 C29,-29 16,-42 0,-42 Z"
+                    fill="#16A34A"
                     stroke="#ffffff"
                     strokeWidth="4"
                   />
-                  <circle r="6" fill="#ffffff" />
+                  <circle r="11" fill="#ffffff" />
+                  <text
+                    x="0"
+                    y="64"
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="800"
+                    fill="#166534"
+                    paintOrder="stroke"
+                    stroke="#ffffff"
+                    strokeWidth="5"
+                  >
+                    {sourceLocation.name || "START"}
+                  </text>
                 </g>
               )}
 
@@ -1517,7 +1596,7 @@ const CampusMap = ({
                       fill="#ffffff"
                       pointerEvents="none"
                     >
-                      YOU ARE HERE
+                        {activeCurrentLoc.name || "YOU ARE HERE"}
                     </text>
                   </g>
                 </g>
@@ -1529,13 +1608,27 @@ const CampusMap = ({
                     destinationLocation.x
                   )}, ${Number(destinationLocation.y)})`}
                 >
-                  <circle
-                    r="18"
-                    fill="#ef4444"
+                  <circle r="46" fill="#DC2626" opacity="0.2" />
+                  <path
+                    d="M0,-42 C-16,-42 -29,-29 -29,-13 C-29,10 -4,35 0,42 C4,35 29,10 29,-13 C29,-29 16,-42 0,-42 Z"
+                    fill="#DC2626"
                     stroke="#ffffff"
                     strokeWidth="4"
                   />
-                  <circle r="6" fill="#ffffff" />
+                  <circle r="11" fill="#ffffff" />
+                  <text
+                    x="0"
+                    y="64"
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="800"
+                    fill="#991B1B"
+                    paintOrder="stroke"
+                    stroke="#ffffff"
+                    strokeWidth="5"
+                  >
+                    {destinationLocation.name || "DESTINATION"}
+                  </text>
                 </g>
               )}
 
@@ -1585,9 +1678,10 @@ const CampusMap = ({
                   const isSelected =
                     selectedBuilding?._id === buildingId ||
                     selectedBuilding?.id === buildingId;
-                  const imageLocation = readOnly
-                    ? getLocationForMapItem(building, mapLocations, "buildingId")
-                    : null;
+                    const imageLocation = readOnly
+                      ? getLocationForMapItem(building, mapLocations, "buildingId") ||
+                        (getLocationImage(building) ? building : null)
+                      : null;
 
                   if (imageLocation) {
                     return (
@@ -1598,6 +1692,7 @@ const CampusMap = ({
                         y={Number(building.position?.y) || 0}
                         width={Number(building.dimensions?.width) || 250}
                         height={Number(building.dimensions?.height) || 180}
+                        rotation={building.rotation}
                         onOpen={() => handleOpenBuilding?.(building)}
                       />
                     );
@@ -1673,6 +1768,12 @@ const CampusMap = ({
                   ))}
                 </g>
               )}
+
+              <RouteEndpointsOverlay
+                sourceLocation={sourceLocation}
+                destinationLocation={destinationLocation}
+                currentLocation={activeCurrentLoc}
+              />
 
               {normalizedBuildings.length === 0 &&
                 campusElements.length === 0 &&

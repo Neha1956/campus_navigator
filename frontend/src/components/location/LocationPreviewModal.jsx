@@ -137,7 +137,7 @@ const LocationPreviewModal = ({ location, isOpen, onClose }) => {
             </div>
 
             {/* Position */}
-            <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
+          {/*  <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 <Compass size={18} />
               </div>
@@ -147,7 +147,7 @@ const LocationPreviewModal = ({ location, isOpen, onClose }) => {
                   X: {location.x}, Y: {location.y}
                 </p>
               </div>
-            </div>
+            </div>*/}
 
             {/* Location */}
             <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">

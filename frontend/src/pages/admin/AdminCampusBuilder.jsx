@@ -17,6 +17,8 @@ import {
   setCurrentBuilding,
 } from "../../redux/slices/buildingSlice";
 
+import { fetchLocations } from "../../redux/slices/locationSlice";
+
 import {
   fetchFloorsByBuilding,
   createFloor,
@@ -77,6 +79,11 @@ const applyPending = (entity, pendingMap) => {
   return mergePatch(entity, patch);
 };
 
+const getLocationImage = (location) => {
+  const image = location?.image || location?.images?.[0];
+  return typeof image === "string" ? image : image?.url || "";
+};
+
 const AdminCampusBuilder = () => {
   const dispatch = useDispatch();
 
@@ -85,6 +92,7 @@ const AdminCampusBuilder = () => {
   const elementState = useSelector((state) => state.mapElements || {});
   const campusElementState = useSelector((state) => state.campusElements || {});
   const roadState = useSelector((state) => state.roads || {});
+  const locationState = useSelector((state) => state.locations || {});
 
   const rawBuildings = buildingState.buildings || [];
   const buildingLoading = buildingState.loading || false;
@@ -102,6 +110,7 @@ const AdminCampusBuilder = () => {
 
   const rawRoads = roadState.roads || [];
   const roadLoading = roadState.loading || false;
+  const locations = locationState.locations || [];
 
   const [buildingDrafts, setBuildingDrafts] = useState({});
   const [roadDrafts, setRoadDrafts] = useState({});
@@ -119,7 +128,22 @@ const AdminCampusBuilder = () => {
     Object.keys(campusElementDrafts).length > 0 ||
     Object.keys(floorElementDrafts).length > 0;
 
-  const buildings = rawBuildings.map((b) => applyPending(b, buildingDrafts));
+  const buildings = rawBuildings.map((building) => {
+    const buildingId = building._id || building.id;
+    const uploadedImage = locations.find((location) => {
+      const reference = location?.buildingId || location?.building;
+      const referenceId = typeof reference === "object" ? reference?._id : reference;
+      return String(referenceId) === String(buildingId) && Boolean(getLocationImage(location));
+    });
+
+    return applyPending(
+      {
+        ...building,
+        image: building.image || getLocationImage(uploadedImage),
+      },
+      buildingDrafts
+    );
+  });
   const campusRoads = rawRoads.map((r) => applyPending(r, roadDrafts));
   const campusElements = rawCampusElements.map((e) => applyPending(e, campusElementDrafts));
   const renderedElements = rawElements.map((e) => applyPending(e, floorElementDrafts));
@@ -179,6 +203,7 @@ const AdminCampusBuilder = () => {
 
   useEffect(() => {
     dispatch(fetchBuildings());
+    dispatch(fetchLocations());
     dispatch(fetchRoads());
     dispatch(fetchCampusElements());
   }, [dispatch]);
@@ -1239,6 +1264,7 @@ const AdminCampusBuilder = () => {
             handleBuildingPropertyChange={handleBuildingPropertyChange}
             handleBuildingPositionChange={handleBuildingPositionChange}
             handleBuildingDimensionChange={handleBuildingDimensionChange}
+            handleBuildingRotation={handleBuildingRotation}
             handleCampusElementPropertyChange={handleCampusElementPropertyChange}
             handleCampusElementPositionChange={handleCampusElementPositionChange}
             handleCampusElementDimensionChange={handleCampusElementDimensionChange}
