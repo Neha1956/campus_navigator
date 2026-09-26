@@ -15,12 +15,31 @@ export const createLocation = async (req, res) => {
   description,
   x,
   y,
+  latitude,
+  longitude,
   icon,
 } = req.body;
     if (!name || !category || x === undefined || y === undefined) {
       return res.status(400).json({
         success: false,
         message: "Name, category, x and y are required",
+      });
+    }
+    const hasLatitude = latitude !== undefined && latitude !== "";
+    const hasLongitude = longitude !== undefined && longitude !== "";
+    if (
+      hasLatitude !== hasLongitude ||
+      (hasLatitude &&
+        (!Number.isFinite(Number(latitude)) ||
+          !Number.isFinite(Number(longitude)) ||
+          Number(latitude) < -90 ||
+          Number(latitude) > 90 ||
+          Number(longitude) < -180 ||
+          Number(longitude) > 180))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude must be provided together with valid values",
       });
     }
 if (mapElementId) {
@@ -59,6 +78,8 @@ if (mapElementId) {
 
   x: Number(x),
   y: Number(y),
+  latitude: hasLatitude ? Number(latitude) : null,
+  longitude: hasLongitude ? Number(longitude) : null,
 
   icon: icon || category,
 
@@ -149,6 +170,8 @@ export const updateLocation = async (req, res) => {
       description,
       x,
       y,
+      latitude,
+      longitude,
       icon,
       existingImages, // Frontend se bache hue purane image URLs ki array yahan aayegi
     } = req.body;
@@ -169,6 +192,35 @@ export const updateLocation = async (req, res) => {
     location.description = description ?? location.description;
     location.x = x !== undefined ? Number(x) : location.x;
     location.y = y !== undefined ? Number(y) : location.y;
+    const nextLatitude =
+      latitude === undefined
+        ? location.latitude
+        : latitude === ""
+          ? null
+          : Number(latitude);
+    const nextLongitude =
+      longitude === undefined
+        ? location.longitude
+        : longitude === ""
+          ? null
+          : Number(longitude);
+    if (
+      (nextLatitude == null) !== (nextLongitude == null) ||
+      (nextLatitude != null &&
+        (!Number.isFinite(nextLatitude) ||
+          !Number.isFinite(nextLongitude) ||
+          nextLatitude < -90 ||
+          nextLatitude > 90 ||
+          nextLongitude < -180 ||
+          nextLongitude > 180))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude must be provided together with valid values",
+      });
+    }
+    location.latitude = nextLatitude;
+    location.longitude = nextLongitude;
     location.icon = icon ?? location.icon;
 
     // 1. Purane retained images ki list process karein

@@ -57,6 +57,20 @@ const locationSchema = new mongoose.Schema(
       required: true,
     },
 
+    latitude: {
+      type: Number,
+      default: null,
+      min: -90,
+      max: 90,
+    },
+
+    longitude: {
+      type: Number,
+      default: null,
+      min: -180,
+      max: 180,
+    },
+
     icon: {
       type: String,
       default: "building",

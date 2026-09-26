@@ -16,6 +16,9 @@ import {
   fetchLocations,
   clearSelectedLocation,
 } from "../../redux/slices/locationSlice";
+import {
+  convertCampusToGps,
+} from "../../utils/geoUtils";
 
 const AddLocationMap = () => {
   const dispatch = useDispatch();
@@ -39,6 +42,8 @@ const AddLocationMap = () => {
     floorId: "",
     description: "",
     icon: "Building2",
+    latitude: "",
+    longitude: "",
   });
 
   const [customCategory, setCustomCategory] = useState("");
@@ -95,10 +100,22 @@ const AddLocationMap = () => {
         setCustomCategory(cat);
       }
 
-      setCoords({
-        x: selectedLocation.x ?? 50,
-        y: selectedLocation.y ?? 50,
-      });
+      const selectedX = selectedLocation.x ?? 50;
+      const selectedY = selectedLocation.y ?? 50;
+      const gpsCoords =
+        selectedLocation.latitude != null && selectedLocation.longitude != null
+          ? {
+              lat: Number(selectedLocation.latitude),
+              lng: Number(selectedLocation.longitude),
+            }
+          : convertCampusToGps(selectedX, selectedY);
+
+      setCoords({ x: selectedX, y: selectedY });
+      setForm((currentForm) => ({
+        ...currentForm,
+        latitude: gpsCoords.lat.toFixed(6),
+        longitude: gpsCoords.lng.toFixed(6),
+      }));
 
       // Robust extraction of all existing images
       const rawImages = [];
@@ -134,6 +151,16 @@ const AddLocationMap = () => {
   const handleMapPointSelected = (_, point) => {
     if (!point) return;
     setCoords({ x: Number(point.x), y: Number(point.y) });
+    const gpsCoords = convertCampusToGps(point.x, point.y);
+    setForm((currentForm) => ({
+      ...currentForm,
+      latitude: gpsCoords.lat.toFixed(6),
+      longitude: gpsCoords.lng.toFixed(6),
+    }));
+  };
+
+  const handleGpsCoordinateChange = (field, value) => {
+    setForm((currentForm) => ({ ...currentForm, [field]: value }));
   };
 
   const mapLocations = [
@@ -178,7 +205,7 @@ const AddLocationMap = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!coords) {
-      alert("Please click on the map to set the location coordinates.");
+      alert("Please select this location's position on the custom map.");
       return;
     }
 
@@ -197,6 +224,8 @@ const AddLocationMap = () => {
     formData.append("icon", form.icon);
     formData.append("x", String(coords.x));
     formData.append("y", String(coords.y));
+    formData.append("latitude", String(form.latitude));
+    formData.append("longitude", String(form.longitude));
 
     existingImages.forEach((img) => {
       formData.append("existingImages", img);
@@ -223,6 +252,8 @@ const AddLocationMap = () => {
           floorId: "",
           description: "",
           icon: "Building2",
+          latitude: "",
+          longitude: "",
         });
         setCoords(null);
         setSelectedFiles([]);
@@ -278,6 +309,34 @@ const AddLocationMap = () => {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-4 text-md font-semibold text-slate-700">2. Add location details</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">GPS coordinates</label>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                step="any"
+                required
+                disabled={submitting}
+                value={form.latitude}
+                onChange={(event) => handleGpsCoordinateChange("latitude", event.target.value)}
+                placeholder="Latitude"
+                aria-label="Latitude"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
+              />
+              <input
+                type="number"
+                step="any"
+                required
+                disabled={submitting}
+                value={form.longitude}
+                onChange={(event) => handleGpsCoordinateChange("longitude", event.target.value)}
+                placeholder="Longitude"
+                aria-label="Longitude"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-slate-100"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Location name</label>
             <input

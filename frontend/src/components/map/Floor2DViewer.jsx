@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Plus, Minus, RotateCcw } from "lucide-react";
 
 const MIN_ZOOM = 0.2;
@@ -12,6 +12,7 @@ const Floor2DViewer = ({
   routeSource,
   routeDestination,
   routeDirections = [],
+  highlightedElementId = null,
 }) => {
   const viewportRef = useRef(null);
   const [zoom, setZoom] = useState(1);
@@ -51,6 +52,32 @@ const Floor2DViewer = ({
       height: calculatedHeight,
     };
   }, [floor, elements]);
+
+  useEffect(() => {
+    if (!highlightedElementId) return;
+
+    const target = elements.find(
+      (element) => String(element._id) === String(highlightedElementId)
+    );
+    if (!target) return;
+
+    const position = target.position || {};
+    const dimensions = target.dimensions || {};
+    const centerX = Number(position.x || 0) + Number(dimensions.width || 100) / 2;
+    const centerY = Number(position.y || 0) + Number(dimensions.height || dimensions.depth || 80) / 2;
+    const frame = requestAnimationFrame(() => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+
+      viewport.scrollTo({
+        left: Math.max(0, (centerX - bounds.minX) * zoom - viewport.clientWidth / 2),
+        top: Math.max(0, (centerY - bounds.minY) * zoom - viewport.clientHeight / 2),
+        behavior: "smooth",
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [bounds, elements, highlightedElementId, zoom]);
 
   const clampZoom = (value) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 
@@ -175,17 +202,61 @@ const Floor2DViewer = ({
               const w = Number(dim.width || 100);
               const h = Number(dim.height || dim.depth || 80);
               const color = el.color || "#94A3B8";
+              const isHighlighted = String(el._id) === String(highlightedElementId);
 
               return (
                 <g key={el._id} transform={`translate(${x}, ${y})`}>
+                  {isHighlighted && (
+                    <>
+                      <rect
+                        x={-8}
+                        y={-8}
+                        width={w + 16}
+                        height={h + 16}
+                        rx={12}
+                        fill="#FACC15"
+                        fillOpacity={0.22}
+                        stroke="#DC2626"
+                        strokeWidth={5}
+                      />
+                      <line
+                        x1={w / 2}
+                        y1={-8}
+                        x2={w / 2}
+                        y2={-38}
+                        stroke="#DC2626"
+                        strokeWidth={4}
+                      />
+                      <rect
+                        x={w / 2 - 42}
+                        y={-64}
+                        width={84}
+                        height={26}
+                        rx={8}
+                        fill="#DC2626"
+                      />
+                      <text
+                        x={w / 2}
+                        y={-47}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize="12"
+                        fontWeight="800"
+                        fill="#ffffff"
+                        pointerEvents="none"
+                      >
+                        FOUND
+                      </text>
+                    </>
+                  )}
                   <rect
                     width={w}
                     height={h}
                     rx={8}
                     fill={color}
                     fillOpacity={0.85}
-                    stroke="#334155"
-                    strokeWidth={1.5}
+                    stroke={isHighlighted ? "#DC2626" : "#334155"}
+                    strokeWidth={isHighlighted ? 4 : 1.5}
                   />
                   <text
                     x={w / 2}

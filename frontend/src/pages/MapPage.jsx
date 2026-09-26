@@ -41,9 +41,9 @@ import IndoorDirectionsPanel from "../components/map/IndoorDirectionsPanel";
 import { getIndoorElementCenter } from "../utils/indoorRoute";
 
 import {
-  getDeviceCoordinates,
   isInsideCampus,
   convertGpsToCampus,
+  watchDeviceCoordinates,
 } from "../utils/geoUtils";
 
 /* =========================================================
@@ -495,6 +495,7 @@ const Floor3DViewer = ({
   routeSource,
   routeDestination,
   routeDirections = [],
+  highlightedElementId = null,
 }) => {
   const [floorViewMode, setFloorViewMode] = useState("2d");
 
@@ -592,6 +593,7 @@ const Floor3DViewer = ({
           routeSource={routeSource}
           routeDestination={routeDestination}
           routeDirections={routeDirections}
+          highlightedElementId={highlightedElementId}
         />
       ) : (
         <Canvas
@@ -657,19 +659,26 @@ const Floor3DViewer = ({
             const color = isDoor 
               ? (el.color || "#B45309") 
               : (el.color || ELEMENT_COLORS[el.type] || "#94A3B8");
+            const isHighlighted = String(el._id) === String(highlightedElementId);
 
             return (
               <group key={el._id} position={[posX, posY, posZ]}>
                 <mesh castShadow receiveShadow>
                   <boxGeometry args={[elW, elH, elD]} />
-                  <meshStandardMaterial color={color} roughness={0.4} metalness={isDoor ? 0.2 : 0.05} />
+                  <meshStandardMaterial
+                    color={isHighlighted ? "#FACC15" : color}
+                    emissive={isHighlighted ? "#DC2626" : "#000000"}
+                    emissiveIntensity={isHighlighted ? 0.8 : 0}
+                    roughness={0.4}
+                    metalness={isDoor ? 0.2 : 0.05}
+                  />
                 </mesh>
                 <lineSegments>
                   <edgesGeometry args={[new THREE.BoxGeometry(elW, elH, elD)]} />
                   <lineBasicMaterial color="#334155" linewidth={1} />
                 </lineSegments>
                 <Html position={[0, elH / 2 + 5, 0]} center distanceFactor={800} occlude>
-                  <div className="px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-bold whitespace-nowrap bg-white text-slate-800 shadow-sm select-none border border-slate-200">
+                  <div className={`px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-bold whitespace-nowrap shadow-sm select-none border ${isHighlighted ? "bg-red-600 text-white border-white ring-2 ring-yellow-300" : "bg-white text-slate-800 border-slate-200"}`}>
                     {el.name}
                   </div>
                 </Html>
@@ -750,6 +759,7 @@ const MapPage = () => {
 
   const [activeBuildingForFloors, setActiveBuildingForFloors] = useState(null);
   const [selectedFloorForView, setSelectedFloorForView] = useState(null);
+  const [highlightedFloorElementId, setHighlightedFloorElementId] = useState(null);
   const [showIndoorDirections, setShowIndoorDirections] = useState(false);
   const [indoorRoute, setIndoorRoute] = useState(null);
   const [floorElementSearch, setFloorElementSearch] = useState("");
@@ -759,6 +769,15 @@ const MapPage = () => {
   const [locationNotice, setLocationNotice] = useState("");
 
   const mapCanvasRef = useRef(null);
+  const locationWatchIdRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (locationWatchIdRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!locations.length) dispatch(fetchLocations());
@@ -853,12 +872,16 @@ const MapPage = () => {
     };
   };
 
-  const handleLocateMe = async () => {
+  const handleLocateMe = () => {
+    if (locationWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      locationWatchIdRef.current = null;
+    }
+
     setLocating(true);
     setLocationNotice("");
 
-    try {
-      const coords = await getDeviceCoordinates();
+    const updateCurrentLocation = (coords) => {
       const inside = isInsideCampus(coords.lat, coords.lng);
 
       if (inside) {
@@ -868,27 +891,46 @@ const MapPage = () => {
           name: "My Live Location",
           x: campusPos.x,
           y: campusPos.y,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          accuracy: coords.accuracy,
           isCurrentLocation: true,
         };
 
         setCurrentLocation(livePos);
-        setLocationNotice("Live location pinpointed on campus!");
+        setLocationNotice("Live location is tracking on campus.");
       } else {
         const dynamicMainGate = getDynamicMainGate();
         setCurrentLocation(dynamicMainGate);
         setLocationNotice(
-          `You are outside the campus. Starting point set to '${dynamicMainGate.name}'.`
+          `You are outside the mapped campus. The map is limited to '${dynamicMainGate.name}'.`
         );
       }
-    } catch (err) {
+
+      setLocating(false);
+    };
+
+    const handleLocationError = (err) => {
       console.warn("GPS error, applying Main Gate fallback:", err.message);
+      if (locationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+        locationWatchIdRef.current = null;
+      }
       const dynamicMainGate = getDynamicMainGate();
       setCurrentLocation(dynamicMainGate);
       setLocationNotice(
-        `Unable to retrieve GPS, starting point set to '${dynamicMainGate.name}'.`
+        `Unable to retrieve GPS (${err.message}), starting point set to '${dynamicMainGate.name}'.`
       );
-    } finally {
       setLocating(false);
+    };
+
+    try {
+      locationWatchIdRef.current = watchDeviceCoordinates(
+        updateCurrentLocation,
+        handleLocationError
+      );
+    } catch (err) {
+      handleLocationError(err);
     }
   };
 
@@ -917,8 +959,9 @@ const MapPage = () => {
     dispatch(fetchFloorsByBuilding(building._id));
   };
 
-  const handleSelectFloor = (floor) => {
+  const handleSelectFloor = (floor, highlightedElement = null) => {
     setIndoorRoute(null);
+    setHighlightedFloorElementId(highlightedElement?._id || null);
     dispatch(setCurrentFloor(floor));
     dispatch(fetchMapElementsByFloor(floor._id));
     setSelectedFloorForView(floor);
@@ -955,6 +998,7 @@ const MapPage = () => {
     if (!destinationFloor) return;
 
     setIndoorRoute(route);
+    setHighlightedFloorElementId(null);
     setShowIndoorDirections(false);
     setActiveBuildingForFloors(null);
     dispatch(setCurrentFloor(destinationFloor));
@@ -1144,8 +1188,10 @@ const MapPage = () => {
               routeSource={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.source : null}
               routeDestination={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.destination : null}
               routeDirections={indoorRoute?.floorId === selectedFloorForView._id ? indoorRoute.directions : []}
+              highlightedElementId={highlightedFloorElementId}
               onBack={() => {
                 setSelectedFloorForView(null);
+                setHighlightedFloorElementId(null);
                 setFloorElementSearch("");
                 setActiveBuildingForFloors(
                   activeBuildingForFloors ||
@@ -1195,16 +1241,22 @@ const MapPage = () => {
                 <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                   🖱️
                 </span>
-                <span>
-                  {(() => {
-                    const sampleBuilding = buildings.find(
-                      (b) => b.hasFloors || b.floorCount > 0 || (Array.isArray(b.floors) && b.floors.length > 0)
-                    );
-                    return sampleBuilding
-                      ? `Double-click on ${sampleBuilding.name} to see floors`
-                      : "Double-click on a building to see floors";
-                  })()}
-                </span>
+               <span>
+  {(() => {
+    const buildingsWithFloors = buildings.filter(
+      (b) =>
+        b.hasFloors ||
+        b.floorCount > 0 ||
+        (Array.isArray(b.floors) && b.floors.length > 0)
+    );
+
+    return buildingsWithFloors.length > 0
+      ? `Double-click on ${buildingsWithFloors
+          .map((b) => b.name)
+          .join(", ")} building to see floors`
+      : "Double-click on a building to see floors";
+  })()}
+</span>
               </div>
             </div>
           </div>
@@ -1353,7 +1405,7 @@ const MapPage = () => {
                           <button
                             key={`${floor._id}-${element._id}`}
                             type="button"
-                            onClick={() => handleSelectFloor(floor)}
+                            onClick={() => handleSelectFloor(floor, element)}
                             className="w-full rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-left transition hover:border-blue-300 hover:bg-blue-50"
                           >
                             <p className="truncate text-xs sm:text-sm font-semibold text-slate-800">

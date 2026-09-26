@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
@@ -27,9 +27,9 @@ import { fetchRouteBetweenLocations } from "../redux/slices/routeSlice";
 
 // Frontend utils se GPS helpers import
 import {
-  getDeviceCoordinates,
   isInsideCampus,
   convertGpsToCampus,
+  watchDeviceCoordinates,
 } from "../utils/geoUtils";
 
 /* =========================================================
@@ -620,8 +620,20 @@ const DirectionsMap = ({
       }
     );
 
+    if (customSourceLocation?.isCurrentLocation) {
+      const liveStart = {
+        x: Number(customSourceLocation.x),
+        y: Number(customSourceLocation.y),
+      };
+      if (points.length && Math.hypot(points[0].x - liveStart.x, points[0].y - liveStart.y) <= 1) {
+        points[0] = liveStart;
+      } else {
+        points.unshift(liveStart);
+      }
+    }
+
     return points;
-  }, [selectedRoute, source, destination]);
+  }, [selectedRoute, source, destination, customSourceLocation]);
 
   const routeLocations = useMemo(() => {
     const namedRouteLocations =
@@ -795,6 +807,15 @@ const DirectionsMap = ({
 
 const Directions = () => {
   const dispatch = useDispatch();
+  const locationWatchIdRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (locationWatchIdRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      }
+    };
+  }, []);
 
   const { buildings = [] } = useSelector(
     (state) => state.buildings || {}
@@ -932,81 +953,68 @@ const Directions = () => {
      USE CURRENT LOCATION
   ========================================================= */
 
-  const handleUseCurrentLocation =
-    async () => {
-      setLocating(true);
-      setLocationNotice("");
+  const handleUseCurrentLocation = () => {
+    if (locationWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      locationWatchIdRef.current = null;
+    }
 
-      try {
-        const coords =
-          await getDeviceCoordinates();
+    setLocating(true);
+    setLocationNotice("");
 
-        const inside = isInsideCampus(
-          coords.lat,
-          coords.lng
-        );
+    const updateCurrentLocation = (coords) => {
+      if (isInsideCampus(coords.lat, coords.lng)) {
+        const campusPos = convertGpsToCampus(coords.lat, coords.lng);
+        const liveSource = {
+          _id: "my-live-gps",
+          name: "My Live Location (GPS)",
+          x: campusPos.x,
+          y: campusPos.y,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          accuracy: coords.accuracy,
+          isCurrentLocation: true,
+        };
 
-        if (inside) {
-          const campusPos =
-            convertGpsToCampus(
-              coords.lat,
-              coords.lng
-            );
-
-          const liveSource = {
-            _id: "my-live-gps",
-            name: "My Live Location (GPS)",
-            x: campusPos.x,
-            y: campusPos.y,
-            isCurrentLocation: true,
-          };
-
-          setCustomSource(liveSource);
-          setFrom(liveSource._id);
-
-          setLocationNotice(
-            "Live GPS location found successfully!"
-          );
-        } else {
-          const dynamicMainGate =
-            getDynamicMainGate();
-
-          setCustomSource(
-            dynamicMainGate
-          );
-
-          setFrom(
-            dynamicMainGate._id
-          );
-
-          setLocationNotice(
-            `You are outside the campus. Starting point set to '${dynamicMainGate.name}'.`
-          );
-        }
-      } catch (err) {
-        console.warn(
-          "GPS error, applying Main Gate fallback:",
-          err.message
-        );
-
-        const dynamicMainGate =
-          getDynamicMainGate();
-
-        setCustomSource(
-          dynamicMainGate
-        );
-
-        setFrom(
-          dynamicMainGate._id
-        );
-
+        setCustomSource(liveSource);
+        setFrom(liveSource._id);
+        setLocationNotice("Live GPS location is tracking on campus.");
+      } else {
+        const dynamicMainGate = getDynamicMainGate();
+        setCustomSource(dynamicMainGate);
+        setFrom(dynamicMainGate._id);
         setLocationNotice(
-          `Unable to retrieve GPS, starting point set to '${dynamicMainGate.name}'.`
+          `You are outside the mapped campus. The map is limited to '${dynamicMainGate.name}'.`
         );
-      } finally {
-        setLocating(false);
       }
+
+      setLocating(false);
     };
+
+    const handleLocationError = (err) => {
+      console.warn("GPS error, applying Main Gate fallback:", err.message);
+      if (locationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+        locationWatchIdRef.current = null;
+      }
+      const dynamicMainGate = getDynamicMainGate();
+      setCustomSource(dynamicMainGate);
+      setFrom(dynamicMainGate._id);
+      setLocationNotice(
+        `Unable to retrieve GPS (${err.message}), starting point set to '${dynamicMainGate.name}'.`
+      );
+      setLocating(false);
+    };
+
+    try {
+      locationWatchIdRef.current = watchDeviceCoordinates(
+        updateCurrentLocation,
+        handleLocationError
+      );
+    } catch (err) {
+      handleLocationError(err);
+    }
+  };
 
   /* =========================================================
      FIND ROUTE
