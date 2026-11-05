@@ -19,6 +19,7 @@ import {
   LocateFixed,
   Loader2,
   Info,
+  Globe2,
 } from "lucide-react";
 
 import {
@@ -37,10 +38,12 @@ import { fetchFloorsByBuilding, setCurrentFloor } from "../redux/slices/floorSli
 import { fetchMapElementsByFloor } from "../redux/slices/mapElementSlice";
 
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
+import GoogleMapView from "../components/map/GoogleMapView";
 import IndoorDirectionsPanel from "../components/map/IndoorDirectionsPanel";
 import { getIndoorElementCenter } from "../utils/indoorRoute";
 
 import {
+  CAMPUS_BOUNDS,
   isInsideCampus,
   convertGpsToCampus,
   watchDeviceCoordinates,
@@ -755,6 +758,7 @@ const MapPage = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [viewMode, setViewMode] = useState("2d");
+  const [gpsLocation, setGpsLocation] = useState(null);
   const [highlightedMapItem, setHighlightedMapItem] = useState(null);
 
   const [activeBuildingForFloors, setActiveBuildingForFloors] = useState(null);
@@ -882,6 +886,7 @@ const MapPage = () => {
     setLocationNotice("");
 
     const updateCurrentLocation = (coords) => {
+      setGpsLocation(coords);
       const inside = isInsideCampus(coords.lat, coords.lng);
 
       if (inside) {
@@ -903,7 +908,7 @@ const MapPage = () => {
         const dynamicMainGate = getDynamicMainGate();
         setCurrentLocation(dynamicMainGate);
         setLocationNotice(
-          `You are outside the mapped campus. The map is limited to '${dynamicMainGate.name}'.`
+          `You are outside the mapped campus. The map is limited to '${dynamicMainGate.name}'. GPS: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)} (accuracy +/-${Math.round(coords.accuracy)} m).`
         );
       }
 
@@ -1108,6 +1113,16 @@ const MapPage = () => {
                     <Boxes size={14} />
                     <span>3D</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("real")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                      viewMode === "real" ? "bg-white text-teal-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Globe2 size={14} />
+                    <span>Real</span>
+                  </button>
                 </div>
 
                 <button
@@ -1201,6 +1216,15 @@ const MapPage = () => {
                     ) ||
                     null
                 );
+              }}
+            />
+          ) : viewMode === "real" ? (
+            <GoogleMapView
+              variant="browse"
+              currentLocation={gpsLocation}
+              initialCenter={{
+                lat: (CAMPUS_BOUNDS.topLat + CAMPUS_BOUNDS.bottomLat) / 2,
+                lng: (CAMPUS_BOUNDS.leftLng + CAMPUS_BOUNDS.rightLng) / 2,
               }}
             />
           ) : viewMode === "3d" ? (

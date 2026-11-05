@@ -1,5 +1,5 @@
 import {
-  Menu,
+  LayoutGrid,
   X,
   Navigation,
   Settings,
@@ -45,7 +45,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition border border-transparent hover:border-blue-100 lg:hidden"
           >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            {sidebarOpen ? <X size={24} /> : <LayoutGrid size={24} />}
           </button>
 
           <NavLink to="/" className="group flex items-center gap-3.5 select-none">

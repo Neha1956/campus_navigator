@@ -1,17 +1,10 @@
 // src/utils/geoUtils.js
 
 export const CAMPUS_BOUNDS = {
- /* topLat: 24.251875,
+  topLat: 24.251875,
   bottomLat: 24.245846,
-  leftLng: 83.943388 ,
-  rightLng:83.944674,*/
-  
-  topLat: 24.167500,
-  bottomLat: 24.156000,
-  leftLng: 83.869000,
-  rightLng: 83.879500
-
-
+  leftLng: 83.943388,
+  rightLng: 83.944674,
 };
 
 export const isInsideCampus = (lat, lng) => {

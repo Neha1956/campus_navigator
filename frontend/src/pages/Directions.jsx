@@ -15,9 +15,11 @@ import {
   Map as MapIcon,
   Loader2,
   Info,
+  Globe2,
 } from "lucide-react";
 
 import CampusMap from "../components/AdminCampusBuilder/CampusMap";
+import GoogleMapView from "../components/map/GoogleMapView";
 import SearchableSelect from "../components/common/SearchableSelect";
 import { fetchBuildings } from "../redux/slices/buildingSlice";
 import { fetchRoads } from "../redux/slices/roadSlice";
@@ -27,6 +29,7 @@ import { fetchRouteBetweenLocations } from "../redux/slices/routeSlice";
 
 // Frontend utils se GPS helpers import
 import {
+  CAMPUS_BOUNDS,
   isInsideCampus,
   convertGpsToCampus,
   watchDeviceCoordinates,
@@ -562,6 +565,9 @@ const DirectionsMap = ({
   viewMode = "2d",
   setViewMode,
   customSourceLocation,
+  currentLocation = null,
+  realFromLocation = null,
+  realToLocation = null,
 }) => {
   const fromId = selectedRoute?.from?._id;
   const toId = selectedRoute?.to?._id;
@@ -575,6 +581,12 @@ const DirectionsMap = ({
   const destination = locations.find(
     (location) => location._id === toId
   );
+  const originPoint = source?.latitude != null && source?.longitude != null
+    ? { lat: Number(source.latitude), lng: Number(source.longitude) }
+    : null;
+  const destinationPoint = destination?.latitude != null && destination?.longitude != null
+    ? { lat: Number(destination.latitude), lng: Number(destination.longitude) }
+    : null;
 
   const routePoints = useMemo(() => {
     if (!selectedRoute?.path?.length) {
@@ -715,6 +727,7 @@ const DirectionsMap = ({
       {/* =====================================================
           VIEW MODE BUTTONS
       ===================================================== */}
+      {viewMode !== "real" && (
       <div className="absolute top-2 left-2 z-[300] flex rounded-xl bg-white/95 p-1 border border-slate-200 shadow-md backdrop-blur">
         <button
           type="button"
@@ -742,11 +755,24 @@ const DirectionsMap = ({
           3D 
         </button>
       </div>
+      )}
 
       {/* =====================================================
           3D VIEW
       ===================================================== */}
-      {viewMode === "3d" ? (
+      {viewMode === "real" ? (
+        <GoogleMapView
+          key={`${realFromLocation?._id || "none"}-${realToLocation?._id || "none"}`}
+          variant="directions"
+          currentLocation={currentLocation}
+          initialCenter={currentLocation || (realFromLocation?.latitude != null && realFromLocation?.longitude != null
+            ? { lat: Number(realFromLocation.latitude), lng: Number(realFromLocation.longitude) }
+            : null) || originPoint || destinationPoint || {
+            lat: (CAMPUS_BOUNDS.topLat + CAMPUS_BOUNDS.bottomLat) / 2,
+            lng: (CAMPUS_BOUNDS.leftLng + CAMPUS_BOUNDS.rightLng) / 2,
+          }}
+        />
+      ) : viewMode === "3d" ? (
         <DirectionsViewer3D
           buildings={buildings}
           campusElements={campusElements}
@@ -846,6 +872,7 @@ const Directions = () => {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [viewMode, setViewMode] = useState("2d");
+  const [gpsLocation, setGpsLocation] = useState(null);
 
   const [locating, setLocating] =
     useState(false);
@@ -963,6 +990,7 @@ const Directions = () => {
     setLocationNotice("");
 
     const updateCurrentLocation = (coords) => {
+      setGpsLocation(coords);
       if (isInsideCampus(coords.lat, coords.lng)) {
         const campusPos = convertGpsToCampus(coords.lat, coords.lng);
         const liveSource = {
@@ -984,7 +1012,7 @@ const Directions = () => {
         setCustomSource(dynamicMainGate);
         setFrom(dynamicMainGate._id);
         setLocationNotice(
-          `You are outside the mapped campus. The map is limited to '${dynamicMainGate.name}'.`
+          `You are outside the mapped campus. The map is limited to '${dynamicMainGate.name}'. GPS: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)} (accuracy +/-${Math.round(coords.accuracy)} m).`
         );
       }
 
@@ -1083,7 +1111,7 @@ const Directions = () => {
       ===================================================== */}
 
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
               onClick={() =>
@@ -1104,6 +1132,18 @@ const Directions = () => {
               </h1>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === "real" ? "2d" : "real")}
+            className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+              viewMode === "real"
+                ? "border-teal-700 bg-teal-700 text-white"
+                : "border-slate-200 bg-white text-slate-700 hover:border-teal-700 hover:text-teal-800"
+            }`}
+          >
+            <Globe2 size={16} />
+            {viewMode === "real" ? "Campus Directions" : "Real Map"}
+          </button>
         </div>
       </div>
 
@@ -1112,6 +1152,7 @@ const Directions = () => {
       ===================================================== */}
 
       <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        {viewMode !== "real" && (
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto] lg:items-end">
 
           {/* START POINT */}
@@ -1217,10 +1258,11 @@ const Directions = () => {
               : "Get Directions"}
           </button>
         </div>
+        )}
 
         {/* LOCATION NOTICE */}
 
-        {locationNotice && (
+        {viewMode !== "real" && locationNotice && (
           <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50/80 p-3 text-xs font-medium text-blue-800 border border-blue-200">
             <Info
               size={15}
@@ -1235,7 +1277,7 @@ const Directions = () => {
 
         {/* ROUTE ERROR */}
 
-        {routeError && (
+        {viewMode !== "real" && routeError && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600">
             {routeError}
           </div>
@@ -1245,14 +1287,16 @@ const Directions = () => {
             ROUTE RESULT
         =================================================== */}
 
-        {selectedRoute && (
-          <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.8fr)]">
+        {(selectedRoute || viewMode === "real") && (
+          <div className={`mt-6 grid gap-5 ${
+            viewMode === "real" ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.8fr)]"
+          }`}>
 
             {/* =================================================
                 MAP
             ================================================= */}
 
-            <div className="min-h-[520px] min-w-0">
+            <div className={viewMode === "real" ? "h-[calc(100dvh-13rem)] min-h-[560px] min-w-0" : "min-h-[520px] min-w-0"}>
               <DirectionsMap
                 locations={locations}
                 selectedRoute={
@@ -1274,6 +1318,9 @@ const Directions = () => {
                     ? customSource
                     : null
                 }
+                currentLocation={gpsLocation}
+                realFromLocation={locations.find((location) => location._id === from) || null}
+                realToLocation={locations.find((location) => location._id === to) || null}
               />
             </div>
 
@@ -1281,6 +1328,7 @@ const Directions = () => {
                 RIGHT SIDEBAR
             ================================================= */}
 
+            {viewMode !== "real" && selectedRoute && (
             <div className="space-y-5">
 
               {/* DISTANCE / TIME */}
@@ -1467,6 +1515,7 @@ const Directions = () => {
                 </div>
               </div>
             </div>
+            )}
           </div>
         )}
       </div>
